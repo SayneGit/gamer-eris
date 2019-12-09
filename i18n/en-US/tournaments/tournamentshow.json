@@ -1,0 +1,14 @@
+{
+  "DESCRIPTION": "Shows the details of a tournament.",
+  "EXTENDED": "This command helps views all the details of a tournament. Majority of the tournaments information is already available on the tournament cards.",
+  "USAGE": "{{prefix}}tournamentshow [#]",
+  "ALIASES": "{{prefix}}ts",
+  "GAMING": "$t(tournaments/tournamentshow:GAMING_1)\n$t(tournaments/tournamentshow:GAMING_2)\n$t(tournaments/tournamentshow:GAMING_3)",
+  "GAMING_1": "**[3] Platform:** {{platform}}",
+  "GAMING_2": "**[4] Game:** {{game}}",
+  "GAMING_3": "**[5] Activity:** {{activity}}",
+  "BASIC": "$t(tournaments/tournamentshow:BASIC_1)\n$t(tournaments/tournamentshow:BASIC_2)",
+  "BASIC_1": "**[6] Roles Allowed To Join:** {{allowedRoles}}",
+  "BASIC_2": "**[7] Roles To Remind:** {{alertRoles}}",
+  "STARTS_AT": "[8] Tourney Starts At:"
+}

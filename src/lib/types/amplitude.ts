@@ -22,4 +22,5 @@ export interface AmplitudeEvent {
     | 'GUILD_REMOVED'
     | 'MEMBER_ADDED'
     | 'MEMBER_REMOVED'
+    | 'TOURNAMENT_CREATED'
 }

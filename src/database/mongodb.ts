@@ -17,6 +17,7 @@ import ShortcutSchema, { GamerShortcut } from './schemas/shortcut'
 import SubscriptionSchema, { GamerSubscription } from './schemas/subscription'
 import SurveySchema from './schemas/survey'
 import TagSchema from './schemas/tag'
+import TournamentSchema from './schemas/tournament'
 import TradingCardSchema from './schemas/tradingCard'
 import UserSchema from './schemas/user'
 import GuildDefaults from '../constants/settings/guild'
@@ -38,6 +39,7 @@ import {
   GamerLevel,
   GamerMission
 } from '../lib/types/gamer'
+import { GamerTournament } from './schemas/tournament'
 
 const connectionString = config.mongoConnectionString
 
@@ -62,6 +64,7 @@ class Database {
     subscription: mongoose.model<GamerSubscription>('Subscription', SubscriptionSchema),
     survey: mongoose.model('Survey', SurveySchema),
     tag: mongoose.model<GamerTag>('Tag', TagSchema),
+    tournament: mongoose.model<GamerTournament>('Tournament', TournamentSchema),
     tradingCard: mongoose.model<GamerTradingCard>('TradingCards', TradingCardSchema),
     user: mongoose.model<UserSettings>('User', UserSchema)
   }

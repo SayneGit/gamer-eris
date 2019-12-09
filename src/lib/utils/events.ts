@@ -33,7 +33,7 @@ export default class {
     const startNow = (template ? template.minutesFromNow : 60) * 60000 + Date.now()
 
     const newEvent = {
-      id: this.createNewID(events),
+      id: this.Gamer.helpers.utils.createNewID(events),
       authorID: message.author.id,
       guildID: message.channel.guild.id,
       // now + X minutes
@@ -80,16 +80,6 @@ export default class {
     })
 
     return newEvent.id
-  }
-
-  createNewID(events: GamerEvent[]) {
-    if (events.length < 1) return 1
-
-    let id = 1
-
-    for (const event of events) if (event.id >= id) id = event.id + 1
-
-    return id
   }
 
   async advertiseEvent(event: GamerEvent, channelID?: string) {

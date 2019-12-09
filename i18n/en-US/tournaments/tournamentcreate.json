@@ -1,0 +1,9 @@
+{
+  "DESCRIPTION": "Create a new tournament in your server so people can RSVP.",
+  "EXTENDED": "$t(tournaments/tournamentcreate:EXTENDED_LINE_1)\n$t(tournaments/tournamentcreate:EXTENDED_LINE_2)",
+  "EXTENDED_LINE_1": "**{{prefix}}tournamentcreate** ~ Creates a brand new tournament using the default template.",
+  "EXTENDED_LINE_2": "**{{prefix}}tournamentcreate [Template Name]** ~ Creates an tournament from an existing template.",
+  "USAGE": "{{prefix}}tournamentcreate *[Tempate Name]*",
+  "ALIASES": "{{prefix}}tc",
+  "CREATE_SUCCESS": "You have successfully created a new tournament on this server with an ID of **[ {{number}} ]**."
+}
