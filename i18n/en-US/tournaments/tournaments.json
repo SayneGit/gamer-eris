@@ -1,7 +1,7 @@
 {
   "DESCRIPTION": "View all the tournaments on the server.",
   "EXTENDED": "**{{prefix}}tournaments** ~ Lists all tournaments on the server. [Click Here To Learn More](https://gamer.netlify.com/tournaments-feature)",
-  "USAGE": "{{prefix}}events",
+  "USAGE": "{{prefix}}tournaments",
   "ALIASES": "{{prefix}}t",
   "INVALID": "There was no tournament able to be found with the ID number you provided.",
   "STARTS_IN": "Tourney Starts In:",

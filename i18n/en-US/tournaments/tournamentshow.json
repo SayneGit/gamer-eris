@@ -7,8 +7,10 @@
   "GAMING_1": "**[3] Platform:** {{platform}}",
   "GAMING_2": "**[4] Game:** {{game}}",
   "GAMING_3": "**[5] Activity:** {{activity}}",
-  "BASIC": "$t(tournaments/tournamentshow:BASIC_1)\n$t(tournaments/tournamentshow:BASIC_2)",
+  "BASIC": "$t(tournaments/tournamentshow:BASIC_1)\n$t(tournaments/tournamentshow:BASIC_2)\n$t(tournaments/tournamentshow:BASIC_3)\n$t(tournaments/tournamentshow:BASIC_4)",
   "BASIC_1": "**[6] Roles Allowed To Join:** {{allowedRoles}}",
   "BASIC_2": "**[7] Roles To Remind:** {{alertRoles}}",
-  "STARTS_AT": "[8] Tourney Starts At:"
+  "BASIC_3": "**[8] Players Per Team:** {{playersPerTeam}}",
+  "BASIC_4": "**[9] Max Teams:** {{maxTeams}}",
+  "STARTS_AT": "[15] Tourney Starts At:"
 }

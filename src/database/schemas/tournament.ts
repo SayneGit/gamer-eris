@@ -24,7 +24,8 @@ export default new mongoose.Schema({
       userIDs: [String]
     }
   ],
-  playersPerTeam: { type: Number, default: 5 }
+  playersPerTeam: { type: Number, default: 5 },
+  guildID: { type: String, required: true }
 })
 
 export interface GamerTournament extends mongoose.Document {

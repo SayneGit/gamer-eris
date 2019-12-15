@@ -99,7 +99,11 @@ const categories = [
   { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`] },
   { name: `emojis`, commands: [`emojis`, `emojicreate`, `emojidelete`] },
   { name: `tags`, commands: [`tagcreate`, `tagdelete`] },
-  { name: `shortcuts`, commands: [`shortcutcreate`, `shortcutremove`, `shortcuts`] }
+  { name: `shortcuts`, commands: [`shortcutcreate`, `shortcutremove`, `shortcuts`] },
+  {
+    name: `tournaments`,
+    commands: [`tournamentadvertise`, `tournamentcreate`, `tournamentjoin`, `tournaments`, `tournamentshow`]
+  }
 ]
 
 export default new Command([`help`, `h`, `commands`, `cmds`], async (message, args, context) => {

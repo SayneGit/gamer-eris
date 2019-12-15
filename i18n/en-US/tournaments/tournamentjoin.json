@@ -1,0 +1,11 @@
+{
+  "DESCRIPTION": "Join an tournament so you can be alerted when it starts!",
+  "EXTENDED": "**{{prefix}}tournamentjoin [Tournament ID] [Team Name] [@Players]** ~ Joins the tournament if there is space and you have the necessary roles to join this tournament.",
+  "USAGE": "{{prefix}}tournamentjoin [Tournament ID] [Team Name] [@Players]",
+  "ALIASES": "{{prefix}}tj",
+	"NEED_PLAYERS": "You did not provide enough players for the team. This tournament requires **{{needed}}** players for each team.",
+	"ALREADY_PLAYING": "{{mention}} is already in another team and can not be added to your team.",
+	"NOT_MEMBER": "I was unable to find {{mention}} on this server. Please double check that the user is a part of the server before adding them to the team.",
+	"MISSING_ALLOWED_ROLES": "{{mention}} does not have one of the necessary roles to participate in this tournament. In order to join, you must have one of the following roles: {{roles}}",
+	"REGISTERED": "Your team has successfully registered to the tournament."
+}

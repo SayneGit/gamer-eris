@@ -22,7 +22,7 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     return
 
   const [name] = args
-  const templateName = name.toLowerCase()
+  const templateName = name ? name.toLowerCase() : undefined
 
   const tournaments = await Gamer.database.models.tournament.find({ guildID: message.channel.guild.id })
   const template = tournaments.find(t => t.templateName === templateName)
@@ -39,6 +39,7 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     adMessageID: undefined,
     adChannelID: guildSettings?.eventsAdvertiseChannelID,
     createdAt: Date.now(),
+    name: template?.name || language(`tournaments/tournamentcreate:DEFAULT_NAME`),
     platform: template?.platform || language(`events/eventcreate:DEFAULT_PLATFORM`),
     game: template?.game || language(`events/eventcreate:DEFAULT_GAME`),
     activity: template?.activity || language(`events/eventcreate:DEFAULT_ACTIVITY`),
@@ -62,7 +63,7 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
   })
 
   // Let the user know it succeeded
-  message.channel.createMessage(language(`events/tournamentcreate:CREATE_SUCCESS`, { number: payload.id }))
+  message.channel.createMessage(language(`tournaments/tournamentcreate:CREATE_SUCCESS`, { number: payload.id }))
   // Run the show command for this event so they can see the event details
   const tournamentshowCommand = Gamer.commandForName(`tournamentshow`)
   if (!tournamentshowCommand) return
@@ -73,5 +74,5 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     guildID: message.channel.guild.id
   })
   if (!tournament) return
-  return Gamer.helpers.tournaments.advertiseEvent(tournament)
+  // return Gamer.helpers.tournaments.advertiseEvent(tournament)
 })

@@ -3,7 +3,7 @@ import GamerClient from '../lib/structures/GamerClient'
 import { PrivateChannel, GroupChannel } from 'eris'
 import GamerEmbed from '../lib/structures/GamerEmbed'
 
-export default new Command([`tournamentjoin`, `ej`], async (message, args, context) => {
+export default new Command([`tournamentjoin`, `tj`], async (message, args, context) => {
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel || !message.member) return
 
   const Gamer = context.client as GamerClient
@@ -24,7 +24,7 @@ export default new Command([`tournamentjoin`, `ej`], async (message, args, conte
   })
   if (!tournament) return message.channel.createMessage(language(`tournaments/tournaments:INVALID`))
 
-	// If the tournament requires more than 1 player on a team and no users were mentioned
+  // If the tournament requires more than 1 player on a team and no users were mentioned
   if (!message.mentions.length && tournament.playersPerTeam > 1)
     return message.channel.createMessage(
       language(`tournaments/tournamentjoin:NEED_PLAYERS`, { needed: tournament.playersPerTeam })
@@ -50,17 +50,25 @@ export default new Command([`tournamentjoin`, `ej`], async (message, args, conte
     if (!hasPermission) {
       const embed = new GamerEmbed().setAuthor(message.author.username, message.author.avatarURL).setDescription(
         language(`tournaments/tournamentjoin:MISSING_ALLOWED_ROLES`, {
-          roles: tournament.allowedRoleIDs.map(id => `<@&${id}>`).join(', ')
+          roles: tournament.allowedRoleIDs.map(id => `<@&${id}>`).join(', '),
+          mention: member.mention
         })
       )
       return message.channel.createMessage({ embed: embed.code })
     }
   }
 
+  // If the tournament requires more than 1 player on a team and no users were mentioned
+  if (playerIDs.length !== tournament.playersPerTeam)
+    return message.channel.createMessage(
+      language(`tournaments/tournamentjoin:NEED_PLAYERS`, { needed: tournament.playersPerTeam })
+    )
+
   tournament.teams.push({
     name: teamName,
     userIDs: playerIDs
   })
   tournament.save()
-  return message.channel.createMessage(response)
+  // return message.channel.createMessage(response)
+  return message.channel.createMessage(language(`tournaments/tournamentjoin:REGISTERED`))
 })

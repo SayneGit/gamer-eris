@@ -22,6 +22,7 @@ import LoggerHelper from '../utils/logger'
 import MailHelper from '../utils/mail'
 import ModerationHelper from '../utils/moderation'
 import ScriptsHelper from '../utils/scripts'
+import TournamentHelper from '../utils/tournaments'
 import TransformHelper from '../utils/transform'
 import UtilsHelper from '../utils/utils'
 
@@ -69,6 +70,7 @@ export default class GamerClient extends Client {
     moderation: new ModerationHelper(this),
     profiles: new ProfileHelper(),
     scripts: new ScriptsHelper(this),
+    tournaments: new TournamentHelper(this),
     transform: new TransformHelper(this),
     utils: new UtilsHelper(this)
   }
