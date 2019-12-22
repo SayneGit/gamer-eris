@@ -19,8 +19,7 @@ export default new Command([`roletoall`, `oprahrole`], async (message, args, con
   })
 
   // If they are using default settings, they won't be vip server
-  if (!guildSettings || !guildSettings.vip.isVIP)
-    return message.channel.createMessage(language(`vip/roletoall:NEED_VIP`))
+  if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`vip/roletoall:NEED_VIP`))
 
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings.staff.adminRoleID)) return
@@ -60,7 +59,7 @@ export default new Command([`roletoall`, `oprahrole`], async (message, args, con
 
   for (const member of message.channel.guild.members.values()) {
     // If the member has the role already skip
-    if (message.member.roles.includes(role.id)) continue
+    if (member.roles.includes(role.id)) continue
 
     if (counter === 3) {
       // Make the bot wait for 5 seconds

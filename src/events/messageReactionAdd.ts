@@ -3,7 +3,6 @@ import Event from '../lib/structures/Event'
 import { ReactionEmoji } from '../lib/types/discord'
 import constants from '../constants'
 import Gamer from '..'
-import { GamerEvent, GamerReactionRole } from '../lib/types/gamer'
 import GamerEmbed from '../lib/structures/GamerEmbed'
 
 const eventEmojis: string[] = []
@@ -11,17 +10,8 @@ const networkReactions = [constants.emojis.heart, constants.emojis.repeat, const
 
 export default class extends Event {
   async execute(rawMessage: PossiblyUncachedMessage, emoji: ReactionEmoji, userID: string) {
-    if (!eventEmojis.length) {
-      const emojis = [constants.emojis.greenTick, constants.emojis.redX]
-
-      for (const emoji of emojis) {
-        const id = Gamer.helpers.discord.convertEmoji(emoji, `id`)
-        if (id) eventEmojis.push(id)
-      }
-    }
-
     if (rawMessage.channel instanceof PrivateChannel || rawMessage.channel instanceof GroupChannel) return
-
+    if (!rawMessage.channel.guild) return console.log('rr RAWMESSAGE guild undefined', rawMessage)
     const user = Gamer.users.get(userID)
     if (!user || user.bot) return
 
@@ -37,17 +27,34 @@ export default class extends Event {
     // Incase another bot deletes the message we catch it
     if (!message) return
 
-    if (eventEmojis.includes(emoji.id)) this.handleEventReaction(message, emoji, userID)
+    // Some odd bug removing channel on getMessage
+    if (!(rawMessage instanceof Message)) message.channel = rawMessage.channel
+
+    // Message might be from other users
     this.handleReactionRole(message, emoji, userID)
+
+    // Messages must be from Gamer
+    if (message.author.id !== Gamer.user.id) return
+
     this.handleProfileReaction(message, emoji, user)
+    this.handleEventReaction(message, emoji, userID)
     this.handleNetworkReaction(message, emoji, user)
     this.handleFeedbackReaction(message, emoji, user)
   }
 
   async handleEventReaction(message: Message, emoji: ReactionEmoji, userID: string) {
+    if (!eventEmojis.length) {
+      const emojis = [constants.emojis.greenTick, constants.emojis.redX]
+
+      for (const emoji of emojis) {
+        const id = Gamer.helpers.discord.convertEmoji(emoji, `id`)
+        if (id) eventEmojis.push(id)
+      }
+    }
+
     if (!message.author.bot || message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel)
       return
-    const event = (await Gamer.database.models.event.findOne({ adMessageID: message.id })) as GamerEvent | null
+    const event = await Gamer.database.models.event.findOne({ adMessageID: message.id })
     if (!event) return
 
     const language = Gamer.i18n.get(Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
@@ -71,7 +78,9 @@ export default class extends Event {
 
         const response = Gamer.helpers.events.joinEvent(event, userID, language)
         event.save()
-        message.channel.createMessage(response).then(msg => setTimeout(() => msg.delete(), 10000))
+        message.channel
+          .createMessage(response)
+          .then(msg => setTimeout(() => msg.delete().catch(() => undefined), 10000))
         break
       case denyEmojiID:
         const joinReactors = await message.getReaction(joinReaction).catch(() => [])
@@ -81,7 +90,7 @@ export default class extends Event {
         Gamer.helpers.events.denyEvent(event, userID)
         message.channel
           .createMessage(language(`events/eventdeny:DENIED`))
-          .then(msg => setTimeout(() => msg.delete(), 10000))
+          .then(msg => setTimeout(() => msg.delete().catch(() => undefined), 10000))
         break
     }
   }
@@ -100,9 +109,9 @@ export default class extends Event {
 
     const botsHighestRole = Gamer.helpers.discord.highestRole(botMember)
 
-    const reactionRole = (await Gamer.database.models.reactionRole.findOne({
+    const reactionRole = await Gamer.database.models.reactionRole.findOne({
       messageID: message.id
-    })) as GamerReactionRole | null
+    })
     if (!reactionRole) return
 
     const emojiKey = `${emoji.name}:${emoji.id}`
@@ -139,7 +148,6 @@ export default class extends Event {
       type: 'PROFILE_INVITE'
     })
 
-    Gamer.helpers.logger.green(`${user.username} just reacted to a profile discord invite <3`)
     try {
       const dmChannel = await user.getDMChannel()
       dmChannel.createMessage(`Interested in Shop Titans? Check out https://discord.gg/shoptitans`)
@@ -366,8 +374,6 @@ export default class extends Event {
         // Server has not enabled mails
         if (!guildSettings.mails.enabled || !guildSettings.mails.categoryID) return
 
-        Gamer.helpers.logger.green(`Sending a mail from feedback reaction`)
-
         const openMail = await Gamer.database.models.mail.findOne({
           guildID: message.channel.guild.id,
           userID: feedback.authorID
@@ -392,8 +398,6 @@ export default class extends Event {
       case constants.emojis.greenTick:
         // If the user is not atleast a mod cancel everything
         if (!reactorIsAdmin && !reactorIsMod) return
-
-        Gamer.helpers.logger.green(`Adding points due to feedback solved reaction.`)
 
         // Send a DM to the user telling them it was solved
         const embed = new GamerEmbed()
@@ -428,8 +432,6 @@ export default class extends Event {
       case constants.emojis.redX:
         // If the user is not atleast a mod cancel everything
         if (!reactorIsAdmin && !reactorIsMod) return
-
-        Gamer.helpers.logger.green(`Adding points due to feedback solved reaction.`)
 
         // Send a DM to the user telling them it was solved
         const rejectedEmbed = new GamerEmbed()
@@ -467,17 +469,9 @@ export default class extends Event {
         const downEmojis = [guildSettings.feedback.idea.emojis.down, guildSettings.feedback.bugs.emojis.down]
         const upEmojis = [guildSettings.feedback.idea.emojis.up, guildSettings.feedback.bugs.emojis.up]
         if (downEmojis.includes(fullEmojiName)) {
-          Gamer.helpers.logger.green(
-            `Removing points due to feedback reaction on ${message.channel.guild.name} discord server.`
-          )
-
           Gamer.helpers.levels.completeMission(feedbackMember, `votefeedback`, feedbackMember.guild.id)
           return Gamer.helpers.levels.removeXP(feedbackMember, 3)
         } else if (upEmojis.includes(fullEmojiName)) {
-          Gamer.helpers.logger.green(
-            `Adding points due to feedback reaction on ${message.channel.guild.name} discord server.`
-          )
-
           Gamer.helpers.levels.completeMission(feedbackMember, `votefeedback`, feedbackMember.guild.id)
           return Gamer.helpers.levels.addLocalXP(feedbackMember, 3, true)
         }

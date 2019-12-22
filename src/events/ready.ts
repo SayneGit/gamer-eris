@@ -30,30 +30,30 @@ export default class extends Event {
     // Clean up inactive verification channels
     setInterval(async () => {
       // Fetch this guilds settings
-      const allGuildSettings = (await Gamer.database.models.guild.find()) as GuildSettings[]
+      const allGuildSettings = await Gamer.database.models.guild.find({ 'verify.enabled': true })
       // We only loop over saved settings guilds because if they use defaults they they wont have verify enabled anyway
       const promises = allGuildSettings.map(async guildSettings => {
         // If this server does not enable the verification system skip or if they have no verification channels.
-        if (!guildSettings.verify.enabled || !guildSettings.verify.channelIDs.length) return
+        if (!guildSettings.verify.channelIDs.length) return
 
         const guild = Gamer.guilds.get(guildSettings.id)
         if (!guild) return
 
         for (const channelID of guildSettings.verify.channelIDs) {
           const channel = guild.channels.get(channelID)
-          if (!(channel instanceof TextChannel)) return
+          if (!channel || !(channel instanceof TextChannel)) continue
 
           // If missing channel perms exit out
-          if (channel.permissionsOf(Gamer.user.id).has('manageChannels')) return
+          if (!channel.permissionsOf(Gamer.user.id).has('manageChannels')) continue
 
           const message =
             channel.messages.get(channel.lastMessageID) ||
             (await channel.getMessage(channel.lastMessageID).catch(() => null))
           // If no message something is very wrong as the first json message should always be there to be safe just cancel
-          if (!message) return
+          if (!message) continue
 
           const language = Gamer.i18n.get(Gamer.guildLanguages.get(channel.guild.id) || `en-US`)
-          if (!language) return
+          if (!language) continue
 
           // If the channel has gone inactive too long delete it so there is no spam empty unused channels
           if (Date.now() - message.timestamp > milliseconds.MINUTE * 10)
@@ -62,7 +62,7 @@ export default class extends Event {
       })
 
       Promise.all(promises)
-    }, milliseconds.MINUTE * 10)
+    }, 2000)
 
     // Randomly select 3 new missions to use every day
     setInterval(() => {
@@ -134,9 +134,6 @@ export default class extends Event {
 
     // Process all gamer events once per minute
     setInterval(() => Gamer.helpers.events.process(), milliseconds.MINUTE)
-
-    // Reset all boosts once they expire
-    setInterval(() => Gamer.helpers.levels.processBoosts(), milliseconds.MINUTE)
 
     // Process all mutes
     setInterval(() => Gamer.helpers.moderation.processMutes(), milliseconds.MINUTE)

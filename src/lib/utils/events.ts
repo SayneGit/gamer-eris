@@ -21,7 +21,7 @@ export default class {
   async createNewEvent(message: Message, templateName = ``, guildSettings: GuildSettings | null) {
     if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
 
-    const events = (await this.Gamer.database.models.event.find({ guildID: message.channel.guild.id })) as GamerEvent[]
+    const events = await this.Gamer.database.models.event.find({ guildID: message.channel.guild.id })
 
     const template = templateName
       ? events.find(event => event.templateName && event.templateName === templateName)
@@ -30,7 +30,7 @@ export default class {
     const language = this.Gamer.i18n.get(this.Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
     if (!language) return
 
-    const startNow = (template ? template.minutesFromNow : 60) * 60000 + Date.now()
+    const startNow = (template?.minutesFromNow || 60) * 60000 + Date.now()
 
     const newEvent = {
       id: this.Gamer.helpers.utils.createNewID(events),
@@ -146,11 +146,21 @@ export default class {
       ? await fetch(event.backgroundURL).then(res => res.buffer())
       : undefined
 
+    const guild = this.Gamer.guilds.get(event.guildID)
+
     const attendees: string[] = []
     for (const id of event.attendees) {
       const user = this.Gamer.users.get(id)
       if (!user) continue
-      attendees.push(`${user.username}#${user.discriminator}`)
+
+      if (!guild) {
+        attendees.push(`${user.username}#${user.discriminator}`)
+        continue
+      }
+
+      const member = guild.members.get(id)
+      if (member) attendees.push(`${member.nick || member.username}#${member.user.discriminator}`)
+      else attendees.push(`${user.username}#${user.discriminator}`)
     }
 
     const canvas = new Canvas(652, 367)
@@ -218,7 +228,10 @@ export default class {
     // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
     // @ts-ignore
     canvas.setTextFont(`13px SFTHeavy`).addText(event.activity, 15 + 35 + platformWidth.width, 261)
-    if (event.showAttendees) canvas.addText(attendees.join(', ').substring(0, 95), 35, 311)
+
+    if (event.showAttendees) {
+      canvas.addResponsiveText(attendees.join(', ').substring(0, 95), 35, 311, 600)
+    }
 
     if (event.isRecurring) {
       canvas
@@ -227,19 +240,6 @@ export default class {
         .setTextAlign(`center`)
         .setTextFont(`18px SFTHeavy`)
         .addResponsiveText(this.Gamer.helpers.transform.humanizeMilliseconds(event.frequency), 175, 50, 158)
-    }
-
-    let i = 0
-
-    for (const t of event.tags) {
-      // draw it
-      canvas.addImage(this.Gamer.buffers.events.tag, 34 + i * 115, 320)
-      canvas
-        .setTextAlign(`center`)
-        .setColor(`#4A4A4A`)
-        .setTextFont(`14px SFTHeavy`)
-        .addText(`#${t}`, 86 + i * 115, 340)
-      i++
     }
 
     return canvas.toBufferAsync()
@@ -334,7 +334,7 @@ export default class {
 
   async process() {
     // First fetch all the events from the database
-    const events = (await this.Gamer.database.models.event.find()) as GamerEvent[]
+    const events = await this.Gamer.database.models.event.find()
     // If there are no events or some error happened just cancel out
     if (!events.length) return
     // Create the timestamp for right now so we can reuse it
@@ -367,7 +367,7 @@ export default class {
           : undefined
       if (card) card.delete()
       // Deletes the event from the database
-      return this.Gamer.database.models.event.deleteOne({ id: event.id, guildID: event.guildID })
+      return this.Gamer.database.models.event.deleteOne({ _id: event._id })
     }
 
     // add new event to events array to be sent to amplitude for product analytics

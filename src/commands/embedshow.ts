@@ -14,7 +14,8 @@ export default new Command(`embedshow`, async (message, args, context) => {
   const [messageID] = args
   if (!messageID) return
 
-  const messageToUse = channel.messages.get(messageID) || (await Gamer.getMessage(channel.id, messageID))
+  const messageToUse =
+    channel.messages.get(messageID) || (await Gamer.getMessage(channel.id, messageID).catch(() => undefined))
   if (!messageToUse) return
 
   const [embed] = messageToUse.embeds
@@ -48,7 +49,7 @@ export default new Command(`embedshow`, async (message, args, context) => {
   if (embed.url) payload.push(`"url": "${embed.url}"`)
   if (embed.image) payload.push(`"image": { "url": "${embed.image.url}" }`)
   if (embed.timestamp) payload.push(`"timestamp": ${embed.timestamp}`)
-  if (embed.footer) payload.push(`"footer": { "text": "${embed.footer.text}", "icon_url": ${embed.footer.icon_url} }`)
+  if (embed.footer) payload.push(`"footer": { "text": "${embed.footer.text}", "icon_url": "${embed.footer.icon_url}" }`)
 
   // Show the embed
 

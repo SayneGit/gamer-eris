@@ -42,6 +42,7 @@ export default class extends Event {
 
   async handleServerLogs(message: Message, oldMessage: OldMessage | null) {
     if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
+    if (message.content === oldMessage?.content) return
     const language = Gamer.i18n.get(Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
     if (!language) return
 
@@ -58,15 +59,17 @@ export default class extends Event {
       .addField(language(`moderation/logs:LINK_TO_MESSAGE`), urlToMessage)
       .setTimestamp()
 
-    if (oldMessage && oldMessage.content) {
+    if (oldMessage && oldMessage.content.length) {
       embed.addField(language(`moderation/logs:OLD_CONTENT`), oldMessage.content.substring(0, 1024))
       if (oldMessage.content.length > 1024)
         embed.addField(language(`moderation/logs:MESSAGE_CONTENT_CONTINUED`), oldMessage.content.substring(1024))
     }
 
-    embed.addField(language(`moderation/logs:NEW_CONTENT`), message.content.substring(0, 1024))
-    if (message.content.length > 1024)
-      embed.addField(language(`moderation/logs:MESSAGE_CONTENT_CONTINUED`), message.content.substring(1024))
+    if (message && message.content.length) {
+      embed.addField(language(`moderation/logs:NEW_CONTENT`), message.content.substring(0, 1024))
+      if (message.content.length > 1024)
+        embed.addField(language(`moderation/logs:MESSAGE_CONTENT_CONTINUED`), message.content.substring(1024))
+    }
 
     const guildSettings = await Gamer.database.models.guild.findOne({ id: message.channel.guild.id })
     if (!guildSettings) return

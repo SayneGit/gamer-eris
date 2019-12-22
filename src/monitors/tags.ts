@@ -2,11 +2,17 @@ import Monitor from '../lib/structures/Monitor'
 import { Message, PrivateChannel, GroupChannel } from 'eris'
 import GamerClient from '../lib/structures/GamerClient'
 import { GamerTag } from '../lib/types/gamer'
-import constants from '../constants'
 
 export default class extends Monitor {
   async execute(message: Message, Gamer: GamerClient) {
     if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
+
+    const hasPermissions = Gamer.helpers.discord.checkPermissions(message.channel, Gamer.user.id, [
+      `sendMessages`,
+      `embedLinks`,
+      `externalEmojis`
+    ])
+    if (!hasPermissions) return
 
     const lowercaseContent = message.content.toLowerCase()
     const [firstWord] = lowercaseContent.split(' ')
@@ -18,12 +24,6 @@ export default class extends Monitor {
       if (tagData.mailOnly) continue
       // Tag name not found in the entire message
       if (!lowercaseContent.includes(tagData.name)) continue
-      // If the tag is not from this server and it is not from a module server skip
-      if (
-        tagData.guildID !== message.channel.guild.id &&
-        constants.modules.servers.find(server => server.id === tagData.guildID)
-      )
-        continue
       // If its basic type and the first word is not the tag name skip
       if (`basic` === tagData.type && firstWord !== tagData.name) continue
       // This should be a valid tag to run
@@ -46,7 +46,12 @@ export default class extends Monitor {
 
     for (const tag of validTags) {
       // This tag is a module tag so check if the module is enabled
-      if (tag.guildID !== message.channel.guild.id && enabledModules.includes(message.channel.guild.id)) continue
+      if (tag.guildID !== message.channel.guild.id) {
+        // This servers tags were not installed so skip
+        if (!enabledModules.includes(tag.guildID)) continue
+        // Make sure this tag was made as a public tag by the original server
+        if (tag.isPublic) continue
+      }
 
       // Valid tag to post
 
@@ -60,7 +65,10 @@ export default class extends Monitor {
         emojis
       )
       // Not an embed
-      if (!transformed.startsWith('{')) return message.channel.createMessage(transformed)
+      if (!transformed.startsWith('{')) {
+        message.channel.createMessage(transformed)
+        return
+      }
 
       try {
         const json = JSON.parse(transformed)
@@ -68,13 +76,11 @@ export default class extends Monitor {
         if (typeof json.thumbnail === 'string') json.thumbnail = { url: json.thumbnail }
         if (json.color === 'RANDOM') json.color = Math.floor(Math.random() * (0xffffff + 1))
         if (json.timestamp) json.timestamp = new Date().toISOString()
-        message.channel.createMessage({ content: json.plaintext, embed: json })
+        await message.channel.createMessage({ content: json.plaintext, embed: json })
       } catch {}
 
       // Only ever run one tag at a time to prevent spam so we need return here
-      return Gamer.helpers.logger.green(
-        `Tag ${tag.name} of type ${tag.type} ran in ${message.channel.name} channel in ${message.channel.guild.name} by ${message.author.username}`
-      )
+      return
     }
   }
 }
