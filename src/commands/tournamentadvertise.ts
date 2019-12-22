@@ -41,7 +41,6 @@ export default new Command([`tournamentadvertise`, `tad`], async (message, args,
     Gamer.deleteMessage(tournament.adChannelID, tournament.adMessageID, `tournament card moved to ${channelName}`)
   }
 
-  return
-  // const channelID = message.channelMentions?.length ? message.channelMentions[0] : message.channel.id
-  // return Gamer.helpers.tournaments.advertisetournament(tournament, channelID)
+  const channelID = message.channelMentions?.length ? message.channelMentions[0] : message.channel.id
+  return Gamer.helpers.tournaments.advertise(tournament, channelID)
 })

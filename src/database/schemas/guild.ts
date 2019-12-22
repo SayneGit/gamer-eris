@@ -243,5 +243,8 @@ export default new mongoose.Schema({
 
   roleIDs: {
     eventsCreate: String
+  },
+  channelIDs: {
+    tournamentCreate: String
   }
 })

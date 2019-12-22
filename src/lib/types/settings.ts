@@ -226,6 +226,9 @@ export interface GuildSettings extends mongoose.Document {
   roleIDs: {
     eventsCreate?: string
   }
+  channelIDs: {
+    tournaments?: string
+  }
 }
 
 export interface GuildSettingsDefault {

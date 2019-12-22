@@ -25,7 +25,8 @@ export default new mongoose.Schema({
     }
   ],
   playersPerTeam: { type: Number, default: 5 },
-  guildID: { type: String, required: true }
+  guildID: { type: String, required: true },
+  backgroundURL: String
 })
 
 export interface GamerTournament extends mongoose.Document {
@@ -65,6 +66,8 @@ export interface GamerTournament extends mongoose.Document {
   teams: Team[]
   /** The amount of players per team. For example, this will determine 5v5 */
   playersPerTeam: number
+  /** The url string for VIP servers to set a custom background image */
+  backgroundURL?: string
 }
 
 export interface Team {

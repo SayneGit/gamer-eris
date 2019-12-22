@@ -37,7 +37,6 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     maxTeams: template?.maxTeams,
     hasStarted: false,
     adMessageID: undefined,
-    adChannelID: guildSettings?.eventsAdvertiseChannelID,
     createdAt: Date.now(),
     name: template?.name || language(`tournaments/tournamentcreate:DEFAULT_NAME`),
     platform: template?.platform || language(`events/eventcreate:DEFAULT_PLATFORM`),
@@ -47,7 +46,8 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     allowedRoleIDs: template ? template.allowedRoleIDs : [],
     alertRoleIDs: template ? template.alertRoleIDs : [],
     teams: [],
-    events: []
+    events: [],
+    adChannelID: guildSettings?.channelIDs.tournaments
   }
 
   await Gamer.database.models.tournament.create(payload)

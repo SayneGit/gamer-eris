@@ -45,7 +45,8 @@ const assetsPaths = {
   },
   background: join(assetsFolder, `leaderboard/background.png`),
   circle: join(assetsFolder, `leaderboard/circle.png`),
-  rectangle: join(assetsFolder, `leaderboard/rectangle.png`)
+  rectangle: join(assetsFolder, `leaderboard/rectangle.png`),
+  tourneyBracket: join(assetsFolder, `tourney.png`)
 }
 
 export default class GamerClient extends Client {
@@ -110,7 +111,8 @@ export default class GamerClient extends Client {
         shoptitans: fs.readFileSync(assetsPaths.badges.shoptitans)
         // // steam: fs.readFileSync(assetsPaths.badges.steam)
       }
-    }
+    },
+    tournaments: fs.readFileSync(assetsPaths.tourneyBracket)
   }
 
   missions: Mission[] = []

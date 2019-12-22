@@ -2,7 +2,7 @@ import { Command } from 'yuuko'
 import { PrivateChannel, GroupChannel } from 'eris'
 import GamerClient from '../lib/structures/GamerClient'
 
-export default new Command([`tagshow`, `ts`], async (message, args, context) => {
+export default new Command([`tagshow`], async (message, args, context) => {
   const Gamer = context.client as GamerClient
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
 

@@ -1,12 +1,13 @@
-// import { Message, PrivateChannel, TextChannel, GroupChannel } from 'eris'
+import { TextChannel } from 'eris'
 // import { GuildSettings } from '../types/settings'
 import GamerClient from '../structures/GamerClient'
+import { GamerTournament } from '../../database/schemas/tournament'
 // import { GamerEvent } from '../types/gamer'
-// import fetch from 'node-fetch'
-// import { Canvas } from 'canvas-constructor'
+import fetch from 'node-fetch'
+import { Canvas } from 'canvas-constructor'
 // import constants from '../../constants'
-// import GamerEmbed from '../structures/GamerEmbed'
-// import config from '../../../config'
+import GamerEmbed from '../structures/GamerEmbed'
+import config from '../../../config'
 // import { TFunction } from 'i18next'
 
 export default class {
@@ -80,168 +81,135 @@ export default class {
   //   return newEvent.id
   // }
 
-  // async advertiseEvent(event: GamerEvent, channelID?: string) {
-  //   const buffer = await this.makeCanvas(event)
+  async advertise(tournament: GamerTournament, channelID?: string) {
+    const buffer = await this.makeCanvas(tournament)
 
-  //   if (!eventCardReactions.length) {
-  //     const emojis = [constants.emojis.greenTick, constants.emojis.redX]
-  //     for (const emoji of emojis) {
-  //       const reaction = this.Gamer.helpers.discord.convertEmoji(emoji, `reaction`)
-  //       if (reaction) eventCardReactions.push(reaction)
-  //     }
-  //   }
+    const imageChannel = this.Gamer.getChannel(config.channelIDs.imageStorage)
+    if (!imageChannel || !(imageChannel instanceof TextChannel)) return
+    const result = await imageChannel.createMessage('', { file: buffer, name: `gamer-tourney-bracket` })
 
-  //   const imageChannel = this.Gamer.getChannel(config.channelIDs.imageStorage)
-  //   if (!imageChannel || !(imageChannel instanceof TextChannel)) return
-  //   const result = await imageChannel.createMessage('', { file: buffer, name: `gamer-event-card` })
+    const embed = new GamerEmbed()
+      .setTitle(`Tournament Description:`)
+      .setDescription(tournament.description)
+      .setImage(result.attachments[0].proxy_url)
+      .setTimestamp(tournament.start)
 
-  //   const embed = new GamerEmbed()
-  //     .setTitle(`Event Description:`)
-  //     .setDescription(event.description)
-  //     .setImage(result.attachments[0].proxy_url)
-  //     .setTimestamp(event.start)
+    const adChannel = channelID
+      ? this.Gamer.getChannel(channelID)
+      : tournament.adChannelID
+      ? this.Gamer.getChannel(tournament.adChannelID)
+      : undefined
 
-  //   const adChannel = channelID
-  //     ? this.Gamer.getChannel(channelID)
-  //     : event.adChannelID
-  //     ? this.Gamer.getChannel(event.adChannelID)
-  //     : undefined
+    if (!adChannel || !(adChannel instanceof TextChannel)) return
 
-  //   if (!adChannel || !(adChannel instanceof TextChannel)) return
+    if (
+      !this.Gamer.helpers.discord.checkPermissions(adChannel, this.Gamer.user.id, [
+        `readMessages`,
+        `sendMessages`,
+        `embedLinks`,
+        `attachFiles`,
+        `readMessageHistory`,
+        `addReactions`,
+        `externalEmojis`
+      ])
+    )
+      return
 
-  //   if (
-  //     !this.Gamer.helpers.discord.checkPermissions(adChannel, this.Gamer.user.id, [
-  //       `readMessages`,
-  //       `sendMessages`,
-  //       `embedLinks`,
-  //       `attachFiles`,
-  //       `readMessageHistory`,
-  //       `addReactions`,
-  //       `externalEmojis`
-  //     ])
-  //   )
-  //     return
+    const adCardMessage = tournament.adMessageID
+      ? adChannel.messages.get(tournament.adMessageID) ||
+        (await adChannel.getMessage(tournament.adMessageID).catch(() => undefined))
+      : undefined
 
-  //   const adCardMessage = event.adMessageID
-  //     ? adChannel.messages.get(event.adMessageID) ||
-  //       (await adChannel.getMessage(event.adMessageID).catch(() => undefined))
-  //     : undefined
+    if (adCardMessage) adCardMessage.edit({ embed: embed.code })
+    else {
+      const card = await adChannel.createMessage({ embed: embed.code })
+      tournament.adChannelID = adChannel.id
+      tournament.adMessageID = card.id
+      tournament.save()
+    }
+  }
 
-  //   if (adCardMessage) adCardMessage.edit({ embed: embed.code })
-  //   else {
-  //     const card = await adChannel.createMessage({ embed: embed.code })
-  //     event.adChannelID = adChannel.id
-  //     event.adMessageID = card.id
-  //     event.save()
-  //     for (const emoji of eventCardReactions) await card.addReaction(emoji).catch(() => null)
-  //   }
-  // }
+  async makeCanvas(tourney: GamerTournament) {
+    const customBackgroundBuffer = tourney.backgroundURL
+      ? await fetch(tourney.backgroundURL).then(res => res.buffer())
+      : undefined
 
-  // async makeCanvas(event: GamerEvent) {
-  //   const eventAuthor = this.Gamer.users.get(event.authorID)
+    const canvas = new Canvas(652, 367).addImage(this.Gamer.buffers.tournaments, 8, 0)
+    if (customBackgroundBuffer) {
+      canvas
+        .setGlobalAlpha(0.85)
+        .save()
+        .createBeveledClip(8, 0, 636, 213, 10)
+        // add the image and the gradient
+        .addImage(customBackgroundBuffer, 8, 0, 636, 213, { radius: 5 })
+        .printLinearGradient(0, 150, 0, 0, [
+          { position: 0, color: `rgba(0, 0, 0, 0.85)` },
+          { position: 0.95, color: `rgba(0, 0, 0, 0)` }
+        ])
+        .addRect(8, 0, 636, 213)
+        .restore()
+    }
 
-  //   const customBackgroundBuffer = event.backgroundURL
-  //     ? await fetch(event.backgroundURL).then(res => res.buffer())
-  //     : undefined
+    // canvas
+    //   .setGlobalAlpha(1)
+    //   .addImage(this.Gamer.buffers.events.rectangle, 0, 145)
+    //   .addImage(this.Gamer.buffers.events.members, 34, 177)
+    //   .addImage(this.Gamer.buffers.events.waiting, 120, 177)
+    //   .addImage(this.Gamer.buffers.events.denials, 190, 177)
+    //   .addImage(this.Gamer.buffers.events.clock, 260, 177)
+    //   .setAntialiasing(`subpixel`)
 
-  //   const attendees: string[] = []
-  //   for (const id of event.attendees) {
-  //     const user = this.Gamer.users.get(id)
-  //     if (!user) continue
-  //     attendees.push(`${user.username}#${user.discriminator}`)
-  //   }
+    //   // event title
+    //   .setTextAlign(`left`)
+    //   .setColor(`#FFFFFF`)
+    //   .setTextFont(`26px SFTHeavy`)
+    //   .addMultilineText(event.title, 30, 90)
 
-  //   const canvas = new Canvas(652, 367)
-  //   if (customBackgroundBuffer) {
-  //     canvas
-  //       .setGlobalAlpha(0.85)
-  //       .save()
-  //       .createBeveledClip(8, 0, 636, 213, 10)
-  //       // add the image and the gradient
-  //       .addImage(customBackgroundBuffer, 8, 0, 636, 213, { radius: 5 })
-  //       .printLinearGradient(0, 150, 0, 0, [
-  //         { position: 0, color: `rgba(0, 0, 0, 0.85)` },
-  //         { position: 0.95, color: `rgba(0, 0, 0, 0)` }
-  //       ])
-  //       .addRect(8, 0, 636, 213)
-  //       .restore()
-  //   } else {
-  //     canvas.addImage(this.Gamer.buffers.events.background, 8, 0)
-  //   }
+    //   // event author
+    //   .setTextFont(`14px SFTHeavy`)
+    //   .addText(`Created by ${eventAuthor?.username || `Unknown User#0000`}`, 30, 145)
 
-  //   canvas
-  //     .setGlobalAlpha(1)
-  //     .addImage(this.Gamer.buffers.events.rectangle, 0, 145)
-  //     .addImage(this.Gamer.buffers.events.members, 34, 177)
-  //     .addImage(this.Gamer.buffers.events.waiting, 120, 177)
-  //     .addImage(this.Gamer.buffers.events.denials, 190, 177)
-  //     .addImage(this.Gamer.buffers.events.clock, 260, 177)
-  //     .setAntialiasing(`subpixel`)
+    //   // event id
+    //   .setTextFont(`18px SFTHeavy`)
+    //   .setTextAlign(`center`)
+    //   .setColor(event.backgroundURL ? `#FFFFFF` : `#4C4C4C`)
+    //   .addResponsiveText(`#${event.id}`, 572, 48, 75)
 
-  //     // event title
-  //     .setTextAlign(`left`)
-  //     .setColor(`#FFFFFF`)
-  //     .setTextFont(`26px SFTHeavy`)
-  //     .addMultilineText(event.title, 30, 90)
+    //   .setTextAlign(`left`)
+    //   .setColor(`#9B9B9B`)
+    //   .setTextFont(`16px SFTHeavy`)
+    //   .addText(`${event.attendees.length} / ${event.maxAttendees}`, 65, 192)
+    //   .addText(event.waitingList.length.toString(), 150, 192)
+    //   .addText(event.denials.length.toString(), 220, 192)
+    //   .setColor(`#4A4A4A`)
+    //   .addText(this.Gamer.helpers.transform.humanizeMilliseconds(event.duration), 290, 192)
+    //   .setTextFont(`24px SFTHeavy`)
+    //   .addText(event.game, 35, 241)
+    //   .setColor(`#7ED321`)
+    //   .setTextFont(`18px SFTHeavy`)
+    //   .addText(event.platform, 35, 261)
+    //   .setColor(`#4C4C4C`)
+    //   .setTextFont(`13px SFTHeavy`)
 
-  //     // event author
-  //     .setTextFont(`14px SFTHeavy`)
-  //     .addText(`Created by ${eventAuthor?.username || `Unknown User#0000`}`, 30, 145)
+    // // .addText(event.description.substring(0, 100), 35, 286)
 
-  //     // event id
-  //     .setTextFont(`18px SFTHeavy`)
-  //     .setTextAlign(`center`)
-  //     .setColor(event.backgroundURL ? `#FFFFFF` : `#4C4C4C`)
-  //     .addResponsiveText(`#${event.id}`, 572, 48, 75)
+    // const platformWidth = canvas.setTextFont(`18px SFTHeavy`).measureText(event.platform)
+    // // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+    // // @ts-ignore
+    // canvas.setTextFont(`13px SFTHeavy`).addText(event.activity, 15 + 35 + platformWidth.width, 261)
+    // if (event.showAttendees) canvas.addText(attendees.join(', ').substring(0, 95), 35, 311)
 
-  //     .setTextAlign(`left`)
-  //     .setColor(`#9B9B9B`)
-  //     .setTextFont(`16px SFTHeavy`)
-  //     .addText(`${event.attendees.length} / ${event.maxAttendees}`, 65, 192)
-  //     .addText(event.waitingList.length.toString(), 150, 192)
-  //     .addText(event.denials.length.toString(), 220, 192)
-  //     .setColor(`#4A4A4A`)
-  //     .addText(this.Gamer.helpers.transform.humanizeMilliseconds(event.duration), 290, 192)
-  //     .setTextFont(`24px SFTHeavy`)
-  //     .addText(event.game, 35, 241)
-  //     .setColor(`#7ED321`)
-  //     .setTextFont(`18px SFTHeavy`)
-  //     .addText(event.platform, 35, 261)
-  //     .setColor(`#4C4C4C`)
-  //     .setTextFont(`13px SFTHeavy`)
+    // if (event.isRecurring) {
+    //   canvas
+    //     .addImage(this.Gamer.buffers.events.recurring, 30, 29)
+    //     .setColor(`#FFFFFF`)
+    //     .setTextAlign(`center`)
+    //     .setTextFont(`18px SFTHeavy`)
+    //     .addResponsiveText(this.Gamer.helpers.transform.humanizeMilliseconds(event.frequency), 175, 50, 158)
+    // }
 
-  //   // .addText(event.description.substring(0, 100), 35, 286)
-
-  //   const platformWidth = canvas.setTextFont(`18px SFTHeavy`).measureText(event.platform)
-  //   // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-  //   // @ts-ignore
-  //   canvas.setTextFont(`13px SFTHeavy`).addText(event.activity, 15 + 35 + platformWidth.width, 261)
-  //   if (event.showAttendees) canvas.addText(attendees.join(', ').substring(0, 95), 35, 311)
-
-  //   if (event.isRecurring) {
-  //     canvas
-  //       .addImage(this.Gamer.buffers.events.recurring, 30, 29)
-  //       .setColor(`#FFFFFF`)
-  //       .setTextAlign(`center`)
-  //       .setTextFont(`18px SFTHeavy`)
-  //       .addResponsiveText(this.Gamer.helpers.transform.humanizeMilliseconds(event.frequency), 175, 50, 158)
-  //   }
-
-  //   let i = 0
-
-  //   for (const t of event.tags) {
-  //     // draw it
-  //     canvas.addImage(this.Gamer.buffers.events.tag, 34 + i * 115, 320)
-  //     canvas
-  //       .setTextAlign(`center`)
-  //       .setColor(`#4A4A4A`)
-  //       .setTextFont(`14px SFTHeavy`)
-  //       .addText(`#${t}`, 86 + i * 115, 340)
-  //     i++
-  //   }
-
-  //   return canvas.toBufferAsync()
-  // }
+    return canvas.toBufferAsync()
+  }
 
   // listEvents(events: GamerEvent[]) {
   //   const now = Date.now()
