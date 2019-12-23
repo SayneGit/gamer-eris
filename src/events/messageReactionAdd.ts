@@ -11,7 +11,7 @@ const networkReactions = [constants.emojis.heart, constants.emojis.repeat, const
 export default class extends Event {
   async execute(rawMessage: PossiblyUncachedMessage, emoji: ReactionEmoji, userID: string) {
     if (rawMessage.channel instanceof PrivateChannel || rawMessage.channel instanceof GroupChannel) return
-    if (!rawMessage.channel.guild) return console.log('rr RAWMESSAGE guild undefined', rawMessage)
+
     const user = Gamer.users.get(userID)
     if (!user || user.bot) return
 
@@ -129,16 +129,16 @@ export default class extends Event {
   }
 
   async handleProfileReaction(message: Message, emoji: ReactionEmoji, user: User) {
-    if (
-      message.channel instanceof PrivateChannel ||
-      message.channel instanceof GroupChannel ||
-      user.id !== Gamer.user.id
-    )
-      return
+    if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
 
     const fullEmojiName = `<:${emoji.name}:${emoji.id}>`
-    if (constants.emojis.discord !== fullEmojiName || !message.embeds.length || !message.attachments.length) return
+    if (constants.emojis.discord !== fullEmojiName || !message.embeds.length) return
 
+    const language = Gamer.i18n.get(Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
+    if (!language) return
+
+    const [embed] = message.embeds
+    if (embed.title !== language(`leveling/profile:CURRENT_MISSIONS`)) return
     Gamer.amplitude.push({
       authorID: message.author.id,
       channelID: message.channel.id,
