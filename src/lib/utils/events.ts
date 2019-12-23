@@ -36,7 +36,6 @@ export default class {
       id: this.Gamer.helpers.utils.createNewID(events),
       authorID: message.author.id,
       guildID: message.channel.guild.id,
-      // now + X minutes
       start: startNow,
       end: startNow + (template ? template.duration : 3600000),
       duration: template ? template.duration : 3600000,
@@ -55,7 +54,6 @@ export default class {
       adMessageID: undefined,
       adChannelID: guildSettings ? guildSettings.eventsAdvertiseChannelID : undefined,
       adCardID: undefined,
-      // timezone: template.timezone,
       createdAt: Date.now(),
       platform: template ? template.platform : language(`events/eventcreate:DEFAULT_PLATFORM`),
       game: template ? template.game : language(`events/eventcreate:DEFAULT_GAME`),

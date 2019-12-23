@@ -25,10 +25,9 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
   const templateName = name ? name.toLowerCase() : undefined
 
   const tournaments = await Gamer.database.models.tournament.find({ guildID: message.channel.guild.id })
-  const template = tournaments.find(t => t.templateName === templateName)
+  const template = templateName ? tournaments.find(t => t.templateName === templateName) : undefined
 
   const startNow = (template ? template.minutesFromNow * milliseconds.MINUTE : milliseconds.WEEK) + Date.now()
-
   const payload = {
     id: Gamer.helpers.utils.createNewID(tournaments),
     creatorID: message.author.id,
@@ -69,10 +68,63 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
   if (!tournamentshowCommand) return
   tournamentshowCommand.execute(message, [payload.id.toString()], context)
 
-  const tournament = await Gamer.database.models.event.findOne({
-    id: payload.id,
-    guildID: message.channel.guild.id
-  })
-  if (!tournament) return
-  // return Gamer.helpers.tournaments.advertiseEvent(tournament)
+  const eventCreateCommand = Gamer.commandForName('eventcreate')
+  if (!eventCreateCommand) return
+
+  const eventIDs: number[] = []
+  for (let i = 0; i < 7; i++) {
+    const eventID = await Gamer.helpers.events.createNewEvent(
+      message,
+      i < 4 ? 'tourney1' : i < 6 ? 'tourney2' : 'tourney3',
+      guildSettings
+    )
+    if (!eventID) continue
+    eventIDs.push(eventID)
+
+    const event = await Gamer.database.models.event.findOne({
+      id: eventID,
+      guildID: message.channel.guild.id
+    })
+    if (!event) return message.channel.createMessage(language(`events/events:INVALID_EVENT`))
+    // The event creator is auto-added so we force leave the event so only team players are in it
+    event.attendees = []
+
+    // Edit the title based on which match this is for
+    switch (i) {
+      case 0:
+        event.title = 'Round 1 Match A'
+        event.start = startNow
+        break
+      case 1:
+        event.title = 'Round 1 Match B'
+        event.start = startNow
+        break
+      case 2:
+        event.title = 'Round 1 Match C'
+        event.start = startNow
+        break
+      case 3:
+        event.title = 'Round 1 Match D'
+        event.start = startNow
+        break
+      case 4:
+        event.title = 'Semi-Finals Match A'
+        event.start = startNow + milliseconds.DAY
+        break
+      case 5:
+        event.title = 'Semi-Finals Match B'
+        event.start = startNow + milliseconds.DAY
+        break
+      case 6:
+        event.title = 'Finals'
+        event.start = startNow + milliseconds.DAY * 2
+        break
+    }
+
+    event.save()
+  }
+
+  return message.channel.createMessage(
+    language(`tournaments/tournamentcreate:EVENTS_CREATED`, { ids: eventIDs.join(', ') })
+  )
 })

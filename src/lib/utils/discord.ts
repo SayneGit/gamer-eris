@@ -101,7 +101,7 @@ export default class {
   }
 
   highestRole(member: Member) {
-    let memberHighestRole: Role | undefined
+    let memberHighestRole = member.guild.roles.get(member.guild.id) as Role
 
     for (const roleID of member.roles) {
       const role = member.guild.roles.get(roleID)
@@ -109,9 +109,7 @@ export default class {
       if (!memberHighestRole || memberHighestRole.position < role.position) memberHighestRole = role
     }
 
-    const everyoneRole = member.guild.roles.get(member.guild.id) as Role
-
-    return memberHighestRole || everyoneRole
+    return memberHighestRole
   }
 
   booleanEmoji(enabled: boolean) {
