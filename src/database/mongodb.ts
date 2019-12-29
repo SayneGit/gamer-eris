@@ -20,9 +20,6 @@ import TagSchema from './schemas/tag'
 import TournamentSchema from './schemas/tournament'
 import TradingCardSchema from './schemas/tradingCard'
 import UserSchema from './schemas/user'
-import GuildDefaults from '../constants/settings/guild'
-import MemberDefaults from '../constants/settings/member'
-import UserDefaults from '../constants/settings/user'
 import { GuildSettings, UserSettings, MemberSettings } from '../lib/types/settings'
 
 import config from '../../config'
@@ -67,12 +64,6 @@ class Database {
     tournament: mongoose.model<GamerTournament>('Tournament', TournamentSchema),
     tradingCard: mongoose.model<GamerTradingCard>('TradingCards', TradingCardSchema),
     user: mongoose.model<UserSettings>('User', UserSchema)
-  }
-
-  constants = {
-    guild: GuildDefaults,
-    member: MemberDefaults,
-    user: UserDefaults
   }
 
   constructor() {

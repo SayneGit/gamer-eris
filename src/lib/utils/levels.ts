@@ -253,15 +253,12 @@ export default class {
 
     // If the user already got the rewards for this mission
     if (missionData.completed) return
-    // The mission has not been completed so just increment by 1
-    if (missionData.amount + 1 <= mission.amount) {
-      missionData.amount += 1
-      missionData.save()
-      return
-    }
 
-    missionData.completed = true
+    missionData.amount += 1
+    if (missionData.amount === mission.amount) missionData.completed = true
+
     missionData.save()
+
     // The mission should be completed now so need to give XP.
     this.addLocalXP(member, mission.reward, true)
     this.addGlobalXP(member, mission.reward, true)

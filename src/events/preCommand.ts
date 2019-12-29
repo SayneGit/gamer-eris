@@ -12,6 +12,8 @@ export default class extends Event {
 
     if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel || !message.member) return
 
+    Gamer.helpers.logger.blue(`[${context.commandName}] Command ran in ${message.channel.guild.name}`)
+
     Gamer.amplitude.push({
       authorID: message.author.id,
       channelID: message.channel.id,

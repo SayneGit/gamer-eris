@@ -33,7 +33,7 @@ export default new Command([`profile`, `p`, `prof`], async (message, args, conte
           const relevantMission = missionData.find(m => m.commandName === mission.commandName)
           if (!relevantMission) return `0 / ${mission.amount} : ${language(mission.title)} **[${mission.reward}] XP**`
 
-          if (relevantMission.amount < mission.amount)
+          if (!relevantMission.completed)
             return `${relevantMission.amount} / ${mission.amount} : ${language(mission.title)} **[${
               mission.reward
             }] XP**`
@@ -43,12 +43,11 @@ export default new Command([`profile`, `p`, `prof`], async (message, args, conte
         .join('\n')
     )
     .attachFile(buffer, fileName)
-    .setImage(`attachment://${fileName}`)
 
   const response = await message.channel.createMessage({ embed: embed.code }, { file: buffer, name: `profile.jpg` })
 
   const userSettings = await Gamer.database.models.user.findOne({
-    id: message.channel.guild.id
+    userID: message.author.id
   })
 
   const backgroundID = userSettings?.profile.backgroundID || 1
@@ -66,7 +65,7 @@ export default new Command([`profile`, `p`, `prof`], async (message, args, conte
   if (hasPermission) {
     const reaction = Gamer.helpers.discord.convertEmoji(constants.emojis.discord, `reaction`)
     if (message.channel.permissionsOf(Gamer.user.id).has('addReactions') && isDefaultBackground && reaction)
-      response.addReaction(reaction)
+      response.addReaction(reaction).catch(() => undefined)
   }
 
   return Gamer.helpers.levels.completeMission(message.member, `profile`, message.channel.guild.id)

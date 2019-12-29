@@ -3,7 +3,7 @@ import i18n from '../../i18next'
 import { TFunction } from 'i18next'
 import * as glob from 'glob'
 import { PrivateChannel, Message, GroupChannel } from 'eris'
-import { Collector, Mission, GamerTag, Slowmode } from '../types/gamer'
+import { Collector, Mission, GamerTag } from '../types/gamer'
 import * as fs from 'fs'
 import { join } from 'path'
 
@@ -52,29 +52,6 @@ const assetsPaths = {
 export default class GamerClient extends Client {
   // Used for bot statistics. Events are stored in cache and every second 10 events are uploaded to amplitude.
   amplitude: AmplitudeEvent[] = []
-  // i18n solution
-  i18n: Map<string, TFunction> = new Map()
-
-  // Message collectors
-  collectors: Map<string, Collector> = new Map()
-
-  database = Database
-
-  helpers = {
-    discord: new DiscordHelper(),
-    events: new EventsHelper(this),
-    feedback: new FeedbackHelper(this),
-    leaderboards: new LeaderboardHelper(this),
-    levels: new LevelsHelper(this),
-    logger: new LoggerHelper(),
-    mail: new MailHelper(this),
-    moderation: new ModerationHelper(this),
-    profiles: new ProfileHelper(),
-    scripts: new ScriptsHelper(this),
-    tournaments: new TournamentHelper(this),
-    transform: new TransformHelper(this),
-    utils: new UtilsHelper(this)
-  }
 
   buffers = {
     botLogo: fs.readFileSync(constants.profiles.clanDefaults.logo),
@@ -115,6 +92,30 @@ export default class GamerClient extends Client {
     tournaments: fs.readFileSync(assetsPaths.tourneyBracket)
   }
 
+  // Message collectors
+  collectors: Map<string, Collector> = new Map()
+
+  database = Database
+
+  helpers = {
+    discord: new DiscordHelper(),
+    events: new EventsHelper(this),
+    feedback: new FeedbackHelper(this),
+    leaderboards: new LeaderboardHelper(this),
+    levels: new LevelsHelper(this),
+    logger: new LoggerHelper(),
+    mail: new MailHelper(this),
+    moderation: new ModerationHelper(this),
+    profiles: new ProfileHelper(this),
+    scripts: new ScriptsHelper(this),
+    transform: new TransformHelper(this),
+    tournaments: new TournamentHelper(this),
+    utils: new UtilsHelper(this)
+  }
+
+  // i18n solution
+  i18n: Map<string, TFunction> = new Map()
+
   missions: Mission[] = []
 
   // All our stores to store files which we can reload easily.
@@ -123,7 +124,7 @@ export default class GamerClient extends Client {
   // Tags are cached so no need to fetch on every message
   tags: Map<string, GamerTag> = new Map()
   // Array that holds user information to have slowmode when users use commands rapidly.
-  slowmode: Slowmode[] = []
+  slowmode: Map<string, number> = new Map()
   // The daily cooldown holder
   cooldowns: Map<string, number> = new Map()
   // The customized guild prefixes. Cached so they arent fetched on every message

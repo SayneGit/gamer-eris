@@ -53,7 +53,7 @@ Gamer.globalCommandRequirements = {
     if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return true
 
     const isDemoChannel = message.channel.id !== '328662219086888961'
-    // If this is not the live demo channel and the user is a bot cancel out
+    // If this is the live demo channel and the user is a bot cancel out
     if (isDemoChannel && message.author.bot) return false
     // If this is live demo and the user is a bot but not a webhook cancel
     if (isDemoChannel && message.author.discriminator !== '0000' && message.author.bot) return false
@@ -72,20 +72,18 @@ Gamer.globalCommandRequirements = {
     }
 
     // If the user is using commands within 2 seconds ignore it
-    if (Gamer.slowmode.some(user => user.id === message.author.id)) {
+    if (Gamer.slowmode.has(message.author.id)) {
       // Cleans up spam command messages from users
       if (botPerms.has('manageMessages')) message.delete().catch(() => null)
       return false
     }
 
-    const guildSettings = await Gamer.database.models.guild.findOne({ id: message.channel.guild.id })
-    if (!guildSettings) return true
-
+    const supportChannelID = Gamer.guildSupportChannelIDs.get(message.channel.guild.id)
     // If it is the support channel and NOT a server admin do not allow command
     if (
-      message.channel.id === guildSettings.mails.supportChannelID &&
+      message.channel.id === supportChannelID &&
       context.commandName !== 'mail' &&
-      !Gamer.helpers.discord.isAdmin(message, guildSettings.staff.adminRoleID)
+      !message.member?.permission.has('administrator')
     )
       return false
 

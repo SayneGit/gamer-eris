@@ -183,10 +183,12 @@ export default class extends Event {
 
     // Clears out any user who is past the slowmode of 2 seconds
     setInterval(() => {
-      if (!Gamer.slowmode.length) return
+      if (!Gamer.slowmode.size) return
       const now = Date.now()
 
-      Gamer.slowmode = Gamer.slowmode.filter(user => now - user.timestamp < 2000)
+      Gamer.slowmode.forEach((timestamp, userID) => {
+        if (now - timestamp > 2000) Gamer.slowmode.delete(userID)
+      })
     }, milliseconds.SECOND)
 
     // Clears all cooldowns every 5 seconds
@@ -204,6 +206,7 @@ export default class extends Event {
     const tags = await Gamer.database.models.tag.find()
     for (const tag of tags) Gamer.tags.set(`${tag.guildID}.${tag.name}`, tag)
 
+    Gamer.helpers.logger.green(`Preparing all missions into cache now...`)
     // Set the missions on startup
     // Remove all missions first before creating any new missions
     await Gamer.database.models.mission.deleteMany({}).catch(error => console.log(error))
@@ -212,6 +215,7 @@ export default class extends Event {
       if (!Gamer.missions.find(m => m.title === randomMission.title)) Gamer.missions.push(randomMission)
     }
 
+    Gamer.helpers.logger.green(`Preparing all cached settings like prefix, languages etc into cache now...`)
     // Cache all the guilds prefixes so we dont need to fetch it every message to check if its a command
     const allGuildSettings = await Gamer.database.models.guild.find()
     for (const settings of allGuildSettings) {

@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 export default new mongoose.Schema({
   // The ID number of the event that users will use to run commands with
-  id: { type: Number, required: true },
+  id: { type: Number, required: true, index: true },
   // A custom spot for the user to write the activity of the event
   activity: String,
   // The channel id where the advertisement will be.
@@ -67,4 +67,4 @@ export default new mongoose.Schema({
   waitingList: [String],
   // If the event is made into a template event then it will be given a name
   templateName: String
-})
+}).index({ id: 1, guildID: 1 })
