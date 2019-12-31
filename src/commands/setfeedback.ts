@@ -25,7 +25,7 @@ export default new Command(`setfeedback`, async (message, args, context) => {
     return
 
   const [type, action] = args
-  if (!type) return helpCommand.execute(message, [`setfeedback`], context)
+  if (!type) return helpCommand.process(message, [`setfeedback`], context)
 
   const isIdea = type.toLowerCase() === `idea`
 
@@ -46,6 +46,20 @@ export default new Command(`setfeedback`, async (message, args, context) => {
 
       return message.channel.createMessage(
         language(`settings/setfeedback:LOG_CHANNEL_SET`, { channel: `<#${logChannelID}>` })
+      )
+    case 'approvalchannel':
+      if (!message.channelMentions || !message.channelMentions.length) {
+        guildSettings.feedback.approvalChannelID = undefined
+        guildSettings.save()
+        return message.channel.createMessage(language(`settings/setfeedback:RESET_CHANNEL`))
+      }
+
+      const [approvalChannelID] = message.channelMentions
+      guildSettings.feedback.approvalChannelID = approvalChannelID
+      guildSettings.save()
+
+      return message.channel.createMessage(
+        language(`settings/setfeedback:APPROVAL_CHANNEL_SET`, { channel: `<#${approvalChannelID}>` })
       )
     case 'solvedchannel':
       if (!message.channelMentions || !message.channelMentions.length)
@@ -85,7 +99,7 @@ export default new Command(`setfeedback`, async (message, args, context) => {
 
   const currentChannelID = isIdea ? guildSettings.feedback.idea.channelID : guildSettings.feedback.bugs.channelID
 
-  if (!action) return helpCommand.execute(message, [`setfeedback`], context)
+  if (!action) return helpCommand.process(message, [`setfeedback`], context)
   // These menus require the user type .setfeedback `idea` or `bug`
   switch (action.toLowerCase()) {
     case 'channel':
@@ -160,5 +174,5 @@ export default new Command(`setfeedback`, async (message, args, context) => {
 
   await message.channel.createMessage(language(`settings/setfeedback:INVALID_USE`))
 
-  return helpCommand.execute(message, [`setfeedback`], context)
+  return helpCommand.process(message, [`setfeedback`], context)
 })
