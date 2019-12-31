@@ -16,7 +16,7 @@ export default new Command([`tournamentjoin`, `tj`], async (message, args, conte
   const helpCommand = Gamer.commandForName(`help`)
   if (!helpCommand) return
 
-  if (!tournamentID || !teamName) return helpCommand.execute(message, [`tournamentjoin`], context)
+  if (!tournamentID || !teamName) return helpCommand.process(message, [`tournamentjoin`], context)
   // Get the tournament from this server using the id provided
   const tournament = await Gamer.database.models.tournament.findOne({
     id: tournamentID,

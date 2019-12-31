@@ -103,7 +103,14 @@ const categories = [
   { name: `emojis`, commands: [`emojis`, `emojicreate`, `emojidelete`] },
   {
     name: `tournaments`,
-    commands: [`tournamentadvertise`, `tournamentcreate`, `tournamentjoin`, `tournaments`, `tournamentshow`]
+    commands: [
+      `tournamentadvertise`,
+      `tournamentcreate`,
+      `tournamentedit`,
+      `tournamentjoin`,
+      `tournaments`,
+      `tournamentshow`
+    ]
   },
   { name: `tags`, commands: [`tagcreate`, `tagdelete`, `tagshow`, `taginstall`, `taguninstall`, `tagpublic`] },
   { name: `shortcuts`, commands: [`shortcutcreate`, `shortcutremove`, `shortcuts`] }

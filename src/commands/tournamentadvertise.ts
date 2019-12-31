@@ -26,7 +26,7 @@ export default new Command([`tournamentadvertise`, `tad`], async (message, args,
   const [number] = args
   const tournamentID = parseInt(number, 10)
 
-  if (!tournamentID) return helpCommand.execute(message, [`tournamentadvertise`], context)
+  if (!tournamentID) return helpCommand.process(message, [`tournamentadvertise`], context)
   // Get the tournament from this server using the id provided
   const tournament = await Gamer.database.models.tournament.findOne({
     id: tournamentID,

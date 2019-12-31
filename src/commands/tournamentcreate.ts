@@ -66,7 +66,7 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
   // Run the show command for this event so they can see the event details
   const tournamentshowCommand = Gamer.commandForName(`tournamentshow`)
   if (!tournamentshowCommand) return
-  tournamentshowCommand.execute(message, [payload.id.toString()], context)
+  tournamentshowCommand.process(message, [payload.id.toString()], context)
 
   const eventCreateCommand = Gamer.commandForName('eventcreate')
   if (!eventCreateCommand) return
