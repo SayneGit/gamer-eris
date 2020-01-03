@@ -51,7 +51,8 @@ const categories = [
       `setcapture`,
       `setlogs`,
       `setmute`,
-      `setevents`
+      `setevents`,
+      `settournaments`
     ]
   },
   { name: `utility`, commands: [`imgur`, `quote`] },
@@ -104,10 +105,14 @@ const categories = [
   {
     name: `tournaments`,
     commands: [
+      `tournamentadd`,
       `tournamentadvertise`,
       `tournamentcreate`,
+      `tournamentdelete`,
       `tournamentedit`,
       `tournamentjoin`,
+      `tournamentkick`,
+      `tournamentresult`,
       `tournaments`,
       `tournamentshow`
     ]

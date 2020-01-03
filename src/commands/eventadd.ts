@@ -1,7 +1,6 @@
 import { Command } from 'yuuko'
 import GamerClient from '../lib/structures/GamerClient'
 import { PrivateChannel, GroupChannel } from 'eris'
-import { GamerEvent } from '../lib/types/gamer'
 
 export default new Command([`eventadd`, `eadd`], async (message, args, context) => {
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel || !message.member) return
@@ -28,10 +27,10 @@ export default new Command([`eventadd`, `eadd`], async (message, args, context) 
 
   if (!eventID) return helpCommand.process(message, [`eventadd`], context)
   // Get the event from this server using the id provided
-  const event = (await Gamer.database.models.event.findOne({
+  const event = await Gamer.database.models.event.findOne({
     id: eventID,
     guildID: message.channel.guild.id
-  })) as GamerEvent | null
+  })
   if (!event) return message.channel.createMessage(language(`events/events:INVALID_EVENT`))
 
   message.channel.createMessage(language(`events/eventadd:PATIENCE`))

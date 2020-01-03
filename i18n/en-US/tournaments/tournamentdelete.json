@@ -1,0 +1,7 @@
+{
+	"DESCRIPTION": "Delete an tournament from the database.",
+	"EXTENDED": "**{{prefix}}tournamentdelete [Tournament ID]** ~ Delete the tournament with the corresponding tournament id.",
+	"USAGE": "{{prefix}}tournamentdelete [Tournament ID]",
+	"ALIASES": "{{prefix}}td",
+	"DELETE": "You have successfully deleted this tournament."
+}

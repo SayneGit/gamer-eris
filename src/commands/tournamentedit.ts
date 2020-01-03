@@ -6,8 +6,8 @@ export default new Command([`tournamentedit`, `te`], async (message, args, conte
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel || !message.member) return
 
   const Gamer = context.client as GamerClient
-
-  const language = Gamer.i18n.get(Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
+  const guildID = message.channel.guild.id
+  const language = Gamer.i18n.get(Gamer.guildLanguages.get(guildID) || `en-US`)
   if (!language) return
 
   const helpCommand = Gamer.commandForName(`help`)
@@ -19,11 +19,12 @@ export default new Command([`tournamentedit`, `te`], async (message, args, conte
   if (!tournamentID || !type) return helpCommand.process(message, [`tournamentedit`], context)
 
   const guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.channel.guild.id
+    id: guildID
   })
 
   // toggles dont need a value
-  if (!fullValue.length && ![`repeat`, `remove`, `dm`, `dms`, `showattendees`].includes(type.toLowerCase())) return
+  if (!fullValue.length && ![`players`, `8`].includes(type.toLowerCase()))
+    return helpCommand.process(message, [`tournamentedit`], context)
   const [value] = fullValue
 
   // Mods/admins are allowed to edit any tournament
@@ -36,9 +37,9 @@ export default new Command([`tournamentedit`, `te`], async (message, args, conte
   // Get the tournament from this server using the id provided
   const tournament = await Gamer.database.models.tournament.findOne({
     id: tournamentID,
-    guildID: message.channel.guild.id
+    guildID: guildID
   })
-  if (!tournament) return message.channel.createMessage(language(`tournaments/tournaments:INVALID_TOURNAMENT`))
+  if (!tournament) return message.channel.createMessage(language(`tournaments/tournaments:INVALID`))
 
   const roleID = message.roleMentions.length ? message.roleMentions[0] : value
 
@@ -66,12 +67,19 @@ export default new Command([`tournamentedit`, `te`], async (message, args, conte
     case '7':
       property = 'alertrole'
       break
+    case '8':
+      property = 'players'
   }
 
+  const role =
+    message.channel.guild.roles.get(roleID) ||
+    message.channel.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
+
+  const removedUserIDs: string[] = []
+  let difference = 0
   let response = `tournaments/tournamentedit:TITLE_UPDATED`
-  switch (type.toLowerCase()) {
+  switch (property) {
     case `title`:
-    case `1`:
       tournament.name = fullValue.join(' ')
       break
     case `background`:
@@ -81,111 +89,57 @@ export default new Command([`tournamentedit`, `te`], async (message, args, conte
       response = `tournaments/tournamentedit:BACKGROUND_UPDATED`
       break
     case `description`:
-    case `2`:
       tournament.description = fullValue.join(' ')
       response = `tournaments/tournamentedit:DESCRIPTION_UPDATED`
       break
     case `platform`:
-    case `3`:
       tournament.platform = fullValue.join(' ')
       response = `tournaments/tournamentedit:PLATFORM_UPDATED`
       break
     case `game`:
-    case `4`:
       tournament.game = fullValue.join(' ')
       response = `tournaments/tournamentedit:GAME_UPDATED`
       break
     case `activity`:
-    case `5`:
       tournament.activity = fullValue.join(' ')
       response = `tournaments/tournamentedit:ACTIVITY_UPDATED`
       break
-    // case `attendees`:
-    // case `4`:
-    //   const maxAttendees = parseInt(value, 10)
-    //   if (!maxAttendees) return
-    //   while (tournament.attendees.length < maxAttendees && tournament.waitingList.length)
-    //     Gamer.helpers.tournaments.transferFromWaitingList(tournament)
-    //   tournament.maxAttendees = maxAttendees
-    //   response = `tournaments/tournamentedit:ATTENDEES_UPDATED`
-    //   break
-    // case `repeat`:
-    //   tournament.isRecurring = !tournament.isRecurring
-    //   response = `tournaments/tournamentedit:REPEAT_UPDATED`
-    //   break
-    // case `remove`:
-    //   tournament.removeRecurringAttendees = !tournament.removeRecurringAttendees
-    //   response = `tournaments/tournamentedit:REMOVE_UPDATED`
-    //   break
-    // case `dm`:
-    // case `dms`:
-    // case `8`:
-    //   tournament.dmReminders = !tournament.dmReminders
-    //   response = `tournaments/tournamentedit:DM_UPDATED`
-    //   break
-    // case `showattendees`:
-    //   tournament.showAttendees = !tournament.showAttendees
-    //   response = `tournaments/tournamentedit:SHOWATTENDEES_UPDATED`
-    //   break
-    // case `reminder`:
-    //   const reminder = Gamer.helpers.transform.stringToMilliseconds(value)
-    //   if (!reminder) return helpCommand.process(message, [`tournamentedit`], context)
+    case `start`:
+      const start = Gamer.helpers.transform.stringToMilliseconds(value)
+      const startTime = new Date(fullValue.join(' ')).getTime()
 
-    //   if (tournament.reminders.includes(reminder))
-    //     tournament.reminders = tournament.reminders.filter(r => r === reminder)
-    //   else tournament.reminders.push(reminder)
-    //   response = `tournaments/tournamentedit:REMINDERS_UPDATED`
-    //   break
-    // case `frequency`:
-    //   const frequency = Gamer.helpers.transform.stringToMilliseconds(value)
-    //   if (!frequency) return helpCommand.process(message, [`tournamentedit`], context)
+      if (!start && !startTime) return helpCommand.process(message, [`tournamentedit`], context)
 
-    //   tournament.frequency = frequency
-    //   response = `tournaments/tournamentedit:FREQUENCY_UPDATED`
-    //   break
-    // case `duration`:
-    // case `3`:
-    //   const duration = Gamer.helpers.transform.stringToMilliseconds(value)
-    //   if (!duration) return helpCommand.process(message, [`tournamentedit`], context)
-
-    //   tournament.duration = duration
-    //   tournament.end = tournament.start + tournament.duration
-    //   response = `tournaments/tournamentedit:DURATION_UPDATED`
-    //   break
-    // case `start`:
-    // case `11`:
-    //   const start = Gamer.helpers.transform.stringToMilliseconds(value)
-    //   const startTime = new Date(fullValue.join(' ')).getTime()
-
-    //   if (!start && !startTime) return helpCommand.process(message, [`tournamentedit`], context)
-
-    //   tournament.start = start ? Date.now() + start : startTime
-    //   tournament.end = tournament.start + tournament.duration
-    //   response = `tournaments/tournamentedit:START_UPDATED`
-    //   break
+      const newStart = start ? Date.now() + start : startTime
+      difference = tournament.start - newStart
+      tournament.start = newStart
+      response = `tournaments/tournamentedit:START_UPDATED`
+      break
     case `allowedrole`:
-    case `6`:
-      const allowedRole =
-        message.channel.guild.roles.get(roleID) ||
-        message.channel.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
-      if (!allowedRole) return helpCommand.process(message, [`tournamentedit`], context)
+      if (!role) return helpCommand.process(message, [`tournamentedit`], context)
 
-      if (tournament.allowedRoleIDs.includes(allowedRole.id))
-        tournament.allowedRoleIDs = tournament.allowedRoleIDs.filter(id => id !== allowedRole.id)
-      else tournament.allowedRoleIDs.push(allowedRole.id)
+      if (tournament.allowedRoleIDs.includes(role.id))
+        tournament.allowedRoleIDs = tournament.allowedRoleIDs.filter(id => id !== role.id)
+      else tournament.allowedRoleIDs.push(role.id)
       response = `tournaments/tournamentedit:ALLOWEDROLE_UPDATED`
       break
     case `alertrole`:
-    case `7`:
-      const roleToAlert =
-        message.channel.guild.roles.get(roleID) ||
-        message.channel.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
-      if (!roleToAlert) return helpCommand.process(message, [`tournamentedit`], context)
+      if (!role) return helpCommand.process(message, [`tournamentedit`], context)
 
-      if (tournament.alertRoleIDs.includes(roleToAlert.id))
-        tournament.alertRoleIDs = tournament.alertRoleIDs.filter(id => id !== roleToAlert.id)
-      else tournament.alertRoleIDs.push(roleToAlert.id)
+      if (tournament.alertRoleIDs.includes(role.id))
+        tournament.alertRoleIDs = tournament.alertRoleIDs.filter(id => id !== role.id)
+      else tournament.alertRoleIDs.push(role.id)
       response = `tournaments/tournamentedit:ALERTROLE_UPDATED`
+      break
+    case `players`:
+      const maxPlayersPerTeam = parseInt(value, 10)
+      if (!maxPlayersPerTeam) return
+      // Update all teams with too many players
+      for (const team of tournament.teams) {
+        if (team.userIDs.length > maxPlayersPerTeam) removedUserIDs.push(...team.userIDs.splice(maxPlayersPerTeam))
+      }
+      tournament.playersPerTeam = maxPlayersPerTeam
+      response = `tournaments/tournamentedit:PLAYERSPERTEAM`
       break
     // case `template`:
     //   tournament.templateName = value
@@ -205,5 +159,62 @@ export default new Command([`tournamentedit`, `te`], async (message, args, conte
 
   tournamentshowCommand.process(message, [tournamentID.toString()], context)
 
-  for (const event of tournament)
+  const eventeditCommand = Gamer.commandForName(`eventedit`)
+  if (!eventeditCommand) return
+
+  await Promise.all(
+    tournament.eventIDs.map(async id => {
+      const event = await Gamer.database.models.event.findOne({ id, guildID })
+      if (!event) return
+
+      switch (property) {
+        case 'background':
+          event.backgroundURL = value
+          break
+        case 'description':
+          event.description = fullValue.join(' ')
+          break
+        case 'platform':
+          event.platform = fullValue.join(' ')
+          break
+        case 'game':
+          event.game = fullValue.join(' ')
+          break
+        case 'activity':
+          event.activity = fullValue.join(' ')
+          break
+        case 'activity':
+          event.activity = fullValue.join(' ')
+          break
+        case 'start':
+          event.start += difference
+          break
+        case 'allowedrole':
+          if (tournament.allowedRoleIDs.includes(role.id))
+            tournament.allowedRoleIDs = tournament.allowedRoleIDs.filter(id => id !== role.id)
+          else tournament.allowedRoleIDs.push(role.id)
+          break
+        case 'alertrole':
+          if (tournament.alertRoleIDs.includes(role.id))
+            tournament.alertRoleIDs = tournament.alertRoleIDs.filter(id => id !== role.id)
+          else tournament.alertRoleIDs.push(role.id)
+          break
+        case 'players':
+          const maxPlayersPerTeam = parseInt(value, 10)
+          if (!maxPlayersPerTeam) return
+          event.maxAttendees = maxPlayersPerTeam * tournament.maxTeams
+          for (const userID of removedUserIDs) {
+            // If this event does not have this user skip
+            if (!event.attendees.includes(userID) && !event.waitingList.includes(userID)) continue
+            // Remove the user from this event
+            event.waitingList = event.waitingList.filter(w => w !== userID)
+            event.attendees = event.attendees.filter(a => a !== userID)
+          }
+          break
+      }
+
+      await event.save()
+      Gamer.helpers.events.advertiseEvent(event)
+    })
+  )
 })

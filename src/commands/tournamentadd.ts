@@ -3,37 +3,51 @@ import GamerClient from '../lib/structures/GamerClient'
 import { PrivateChannel, GroupChannel } from 'eris'
 import GamerEmbed from '../lib/structures/GamerEmbed'
 
-export default new Command([`tournamentjoin`, `tj`], async (message, args, context) => {
+export default new Command([`tournamentadd`, `tadd`], async (message, args, context) => {
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel || !message.member) return
 
   const Gamer = context.client as GamerClient
-  const language = Gamer.i18n.get(Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
+  const guildID = message.channel.guild.id
+
+  const language = Gamer.i18n.get(Gamer.guildLanguages.get(guildID) || `en-US`)
   if (!language) return
 
-  const [number, teamName] = args
-  const tournamentID = parseInt(number, 10)
   const helpCommand = Gamer.commandForName(`help`)
   if (!helpCommand) return
 
-  if (!tournamentID || !teamName) return helpCommand.process(message, [`tournamentjoin`], context)
+  const [number, teamName] = args
+  const tournamentID = parseInt(number, 10)
+
+  if (!tournamentID) return helpCommand.process(message, [`tournamentadd`], context)
+
+  const guildSettings = await Gamer.database.models.guild.findOne({
+    id: guildID
+  })
+
+  if (
+    !Gamer.helpers.discord.isModerator(message, guildSettings ? guildSettings.staff.modRoleIDs : []) &&
+    !Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)
+  )
+    return
+
   // Get the tournament from this server using the id provided
   const tournament = await Gamer.database.models.tournament.findOne({
     id: tournamentID,
-    guildID: message.channel.guild.id
+    guildID: guildID
   })
   if (!tournament) return message.channel.createMessage(language(`tournaments/tournaments:INVALID`))
 
-  // If the tournament requires more than 1 player on a team and no users were mentioned
-  if (!message.mentions.length && tournament.playersPerTeam > 1)
+  if (!message.mentions.length || message.mentions.length !== tournament.playersPerTeam)
     return message.channel.createMessage(
       language(`tournaments/tournamentjoin:NEED_PLAYERS`, { needed: tournament.playersPerTeam })
     )
 
+  message.channel.createMessage(language(`tournaments/tournamentadd:PATIENCE`))
+
   const playerIDs = message.mentions.map(user => user.id)
-  if (!playerIDs.includes(message.author.id)) playerIDs.unshift(message.author.id)
 
   for (const userID of playerIDs) {
-    const mention = `<@${userID}>`
+    const mention = `<@!${userID}>`
     // Check if any of the users are already in a team
     if (tournament.teams.find(team => team.userIDs.includes(userID)))
       return message.channel.createMessage(language(`tournaments/tournamentjoin:ALREADY_PLAYING`, { mention }))
@@ -47,7 +61,7 @@ export default new Command([`tournamentjoin`, `tj`], async (message, args, conte
       : true
 
     if (!hasPermission) {
-      const embed = new GamerEmbed().setAuthor(message.author.username, message.author.avatarURL).setDescription(
+      const embed = new GamerEmbed().setAuthor(member.user.username, member.user.avatarURL).setDescription(
         language(`tournaments/tournamentjoin:MISSING_ALLOWED_ROLES`, {
           roles: tournament.allowedRoleIDs.map(id => `<@&${id}>`).join(', '),
           mention: member.mention
@@ -57,18 +71,11 @@ export default new Command([`tournamentjoin`, `tj`], async (message, args, conte
     }
   }
 
-  // If the tournament requires more than 1 player on a team and no users were mentioned
-  if (playerIDs.length !== tournament.playersPerTeam)
-    return message.channel.createMessage(
-      language(`tournaments/tournamentjoin:NEED_PLAYERS`, { needed: tournament.playersPerTeam })
-    )
-
   tournament.teams.push({
     name: teamName,
     userIDs: playerIDs
   })
   tournament.save()
 
-  // return message.channel.createMessage(response)
   return message.channel.createMessage(language(`tournaments/tournamentjoin:REGISTERED`))
 })

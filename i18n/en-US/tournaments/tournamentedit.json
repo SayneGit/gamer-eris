@@ -40,5 +40,6 @@
   "ALERTROLE_UPDATED": "The tournaments alert roles have been updated.",
 	"ALLOWEDROLE_UPDATED": "The tournaments allowed roles have been updated.",
   "TEMPLATE_UPDATED": "This tournament is now a template only tournament.",
-  "SHOWATTENDEES_UPDATED": "The show attendees option has been updated."
+  "SHOWATTENDEES_UPDATED": "The show attendees option has been updated.",
+  "PLAYERSPERTEAM": "The maximum amount of players per team has been updated."
 }

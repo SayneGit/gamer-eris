@@ -46,10 +46,10 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     alertRoleIDs: template ? template.alertRoleIDs : [],
     teams: [],
     events: [],
-    adChannelID: guildSettings?.channelIDs.tournaments
+    adChannelID: guildSettings?.channelIDs.tournamentAdvertisements
   }
 
-  await Gamer.database.models.tournament.create(payload)
+  const tournament = await Gamer.database.models.tournament.create(payload)
 
   // add new event to events array to be sent to amplitude for product analytics
   Gamer.amplitude.push({
@@ -88,6 +88,7 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
     if (!event) return message.channel.createMessage(language(`events/events:INVALID_EVENT`))
     // The event creator is auto-added so we force leave the event so only team players are in it
     event.attendees = []
+    event.maxAttendees = tournament.maxTeams * tournament.playersPerTeam
 
     // Edit the title based on which match this is for
     switch (i) {
@@ -121,8 +122,12 @@ export default new Command([`tournamentcreate`, `tc`], async (message, args, con
         break
     }
 
-    event.save()
+    await event.save()
+    Gamer.helpers.events.advertiseEvent(event)
   }
+
+  tournament.eventIDs = eventIDs
+  tournament.save()
 
   return message.channel.createMessage(
     language(`tournaments/tournamentcreate:EVENTS_CREATED`, { ids: eventIDs.join(', ') })

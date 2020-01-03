@@ -1,0 +1,15 @@
+{
+  "DESCRIPTION": "Set the tournaments server settings.",
+  "EXTENDED": "$t(settings/settournaments:EXTENDED_LINE_1)\n$t(settings/settournaments:EXTENDED_LINE_2)\n$t(settings/settournaments:EXTENDED_LINE_3)\n$t(settings/settournaments:EXTENDED_LINE_4)",
+  "EXTENDED_LINE_1": "**{{prefix}}settournaments adchannel [#Channel]** ~ Sets the default tournament advertisement channel.",
+  "EXTENDED_LINE_2": "**{{prefix}}settournaments adchannel** ~ Disables the default tournament advertisement channel.",
+  "EXTENDED_LINE_3": "**{{prefix}}settournaments resultchannel [#Channel]** ~ Sets the default tournament channel where match results will be reported.",
+  "EXTENDED_LINE_4": "**{{prefix}}settournaments resultchannel** ~ Disables the default tournament result channel.",
+  "USAGE": "{{prefix}}settournaments [adchannel | resultchannel] *[#Channel]*",
+  "ALIASES": "Settournaments does not have any aliases.",
+  "NEED_CHANNEL": "You did not provide a channel.",
+  "SET_ADCHANNEL": "The default tournament advertisement channel has been set to {{channel}}.",
+  "RESET_ADCHANNEL": "The default tournament advertisement channel has been removed.",
+  "SET_RESULTCHANNEL": "The default tournament match results channel has been set to {{channel}}.",
+  "RESET_RESULTCHANNEL": "The default tournament match results channel has been removed."
+}

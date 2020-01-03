@@ -1,0 +1,6 @@
+{
+  "DESCRIPTION": "Send the results for your tournaments match to be reviewed by one of the staff.",
+  "EXTENDED": "**{{prefix}}tournamentresult [Tournament ID] [Team Name]** ~ Sends the result for the tournament with the winning team name.",
+  "USAGE": "{{prefix}}tournamentresult [Tournament ID] [Team Name]",
+  "ALIASES": "{{prefix}}tournamentr"
+}

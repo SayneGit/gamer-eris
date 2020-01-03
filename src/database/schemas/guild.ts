@@ -247,6 +247,7 @@ export default new mongoose.Schema({
     eventsCreate: String
   },
   channelIDs: {
-    tournamentCreate: String
+    tournamentAdvertisements: String,
+    tournamentResults: String
   }
 })

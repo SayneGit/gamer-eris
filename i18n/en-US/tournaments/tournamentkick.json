@@ -1,0 +1,9 @@
+{
+  "DESCRIPTION": "Kick a member from the tournament!",
+  "EXTENDED": "**{{prefix}}tournamentkick [tournament ID] [Team Name]** ~ Kicks a team from the tournament.",
+  "USAGE": "{{prefix}}tournamentkick [tournament ID] [Team Name]",
+  "ALIASES": "{{prefix}}tk",
+  "INVALID_TEAM": "The team name you provided could not be found in this tournament.",
+  "KICKED": "The team has been kicked from the tournament.",
+  "PATIENCE": "Please hold on while I remove all the players on this team from the tournament."
+}

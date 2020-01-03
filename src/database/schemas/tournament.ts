@@ -24,6 +24,7 @@ export default new mongoose.Schema({
       userIDs: [String]
     }
   ],
+  eventIDs: [Number],
   playersPerTeam: { type: Number, default: 5 },
   guildID: { type: String, required: true },
   backgroundURL: String
@@ -64,6 +65,8 @@ export interface GamerTournament extends mongoose.Document {
   adMessageID: string
   /** The teams that are currently registered to play in the tournament */
   teams: Team[]
+  /**  The event ids that are related to this tournament. */
+  eventIDs: number[]
   /** The amount of players per team. For example, this will determine 5v5 */
   playersPerTeam: number
   /** The url string for VIP servers to set a custom background image */
