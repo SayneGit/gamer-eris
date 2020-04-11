@@ -5,6 +5,7 @@ import CommandSchema, { GamerCommandPermission } from './schemas/command'
 import EmojiSchema from './schemas/emoji'
 import EventSchema from './schemas/event'
 import FeedbackSchema, { GamerFeedback } from './schemas/feedback'
+import IdleDiscordRevolutionSchema, { GamerIdleDiscordRevolution } from './schemas/idlediscordrevolution'
 import GuildSchema from './schemas/guild'
 import LabelSchema from './schemas/label'
 import LevelSchema from './schemas/level'
@@ -56,6 +57,10 @@ class Database {
     event: mongoose.model<GamerEvent>('Event', EventSchema),
     feedback: mongoose.model<GamerFeedback>('Feedback', FeedbackSchema),
     guild: mongoose.model<GuildSettings>('Guild', GuildSchema),
+    idlediscordrevolution: mongoose.model<GamerIdleDiscordRevolution>(
+      'IdleDiscordRevolution',
+      IdleDiscordRevolutionSchema
+    ),
     label: mongoose.model<GamerMailLabel>('Label', LabelSchema),
     level: mongoose.model<GamerLevel>('Level', LevelSchema),
     mail: mongoose.model<GamerMail>('Mail', MailSchema),

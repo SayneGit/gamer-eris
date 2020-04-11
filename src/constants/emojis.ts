@@ -1,6 +1,7 @@
 export default {
   angryping: `<a:angeryping:664865672630763551>`,
   bite: `<a:bite:669930972325871626>`,
+  boosts: `<:boost:698582571675549807>`,
   coin: `<:g4m3rwhite:443416083874054145>`,
   currency: `<:gg:601135376765157416>`,
   dab: `<a:dab:664857622343843870>`,

@@ -1,0 +1,10 @@
+{
+  "DESCRIPTION": "Buy an upgrade with your boosts in the Idle Discord Revolution game.",
+  "EXTENDED": "**{{prefix}}idrupgrade** ~ Buy the recommended upgrade with your boosts in the Idle Discord Revolution game.",
+  "USAGE": "{{prefix}}idrupgrade",
+  "ALIASES": "{{prefix}}idru",
+	"EXISTS": "You have no {{emoji}} boosts to make your first upgrade. To start, use the **idrcreate** command to create your own profile and get some free boosts to make your first purchase.",
+	"UPGRADED": "Upgraded {{name}} to level {{level}} for {{cost}} {{emoji}}. You have {{left}} {{emoji}} left.",
+	"FRIENDS_1_TITLE": "The friend who always forgets you and doesn't respond to your messages.",
+	"FRIENDS_1_RESPONSE": "Congrats, you just took your first step towards the Discord Revolution. By gathering many friends, we can begin to gather the necessary talents needed to learn all of Discord's most private secrets. It is time for the Discord Revolution! LONG LIVE THE REVOLUTION!"
+}

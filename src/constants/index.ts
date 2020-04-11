@@ -1,5 +1,6 @@
 import emojis from './emojis'
 import general from './general'
+import idle from './idle'
 import levels from './levels'
 import personalities from './personalities'
 import profanity from './profanity'
@@ -15,6 +16,7 @@ export default {
   emojis,
   general,
   gifs,
+  idle,
   levels,
   personalities,
   profanity,

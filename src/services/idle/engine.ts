@@ -7,6 +7,7 @@ function prestige() {
 
 function upgrade(item: string) {
   // This function is used to upgrade something. It costs some currency and upgrades it
+  console.log('upgrading', item)
 }
 
 function process() {
@@ -21,10 +22,15 @@ function reset() {
   // This function will totally reset your game. Incase users want to play again.
 }
 
+function calculateMillisecondsTillBuyable(currency: number, cost: number, perSecond: number) {
+  return (cost - currency) / perSecond / 1000
+}
+
 export const idleGameEngine = {
   prestige,
   upgrade,
   process,
   viewAd,
-  reset
+  reset,
+  calculateMillisecondsTillBuyable
 }
