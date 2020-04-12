@@ -443,6 +443,9 @@ export default class {
     ])
     if (!hasPerms) return
 
+    // Remove the fields that tell how to respond
+    embed.code.fields = []
+
     channel.createMessage({ embed: embed.code })
   }
 }
