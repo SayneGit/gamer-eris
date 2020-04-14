@@ -48,7 +48,7 @@ export default {
   },
   nitro: {
     baseCost: 25798901760,
-    baseProfit: 360,
+    baseProfit: 1610667,
     upgrades: new Map([[1, { title: '', response: '' }]])
   }
 }
