@@ -151,29 +151,6 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   const CHECKWIKI = language(`basic/help:CHECK_WIKI`)
   const LINKSVALUE = language(`basic/help:LINKS_VALUE`)
 
-  const usedCategories: string[] = []
-
-  Gamer.commands.forEach(command => {
-    const [name] = command.names
-    const category = categories.find(c => c.commands.includes(name)) || { name: `basic` }
-
-    // const EXTENDED = language(`${category.name}/${name}:EXTENDED`, { prefix })
-    const USAGE = language(`${category.name}/${name}:USAGE`, { prefix })
-    const ALIASES = language(`${category.name}/${name}:ALIASES`, { prefix })
-    const NO_EXTENDED = language('basic/help:NO_EXTENDED')
-    if (!usedCategories.includes(category.name)) {
-      usedCategories.push(category.name)
-      message.channel.createMessage(`# ${Gamer.helpers.transform.toTitleCase(category.name)} Commands
-
-||||
-|--- |--- |--- |
-|Command|Purpose|Aliases|`)
-    }
-    message.channel.createMessage(
-      `|${name}|${language(`${category.name}/${name}:DESCRIPTION`) || NO_EXTENDED}|${USAGE}|${ALIASES}|`
-    )
-  })
-
   if (!args.length) {
     // Create the main help embed
     const embed = new MessageEmbed()
