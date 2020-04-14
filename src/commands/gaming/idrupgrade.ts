@@ -104,7 +104,10 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   // Now that all upgrades have completed, we can save the profile
   profile.save()
 
-  return message.channel.createMessage(
+  Gamer.helpers.levels.completeMission(message.member, `idrupgrade`, message.guildID)
+
+  return Gamer.helpers.discord.embedResponse(
+    message,
     language(`gaming/idrupgrade:UPGRADED`, {
       name: category,
       level: finalLevel,
