@@ -21,6 +21,9 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   if (!profile)
     return message.channel.createMessage(language(`gaming/idrupgrade:EXISTS`, { emoji: constants.emojis.boosts }))
 
+  // First we update this users currency since the last time they were active
+  await idleGameEngine.process(profile)
+  
   const allowedItems = ['friends', 'servers']
 
   const [type, number] = args
@@ -35,22 +38,16 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   for (let i = 1; i <= amount; i++) {
     // Check the cost of this item
     let cost = 0
-    let level = 0
-    let baseProfit = 0
     let response = ''
 
     switch (category) {
       case 'friends':
-        cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, i)
-        level = profile.friends || 0
-        baseProfit = constants.idle.friends.baseProfit
+        cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, (profile.friends || 0) + i)
         profile.friends = (profile.friends || 0) + 1
         response = getUpgrade('friends', profile.friends)?.response || ''
         break
       case 'servers':
-        cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, i)
-        level = profile.servers || 0
-        baseProfit = constants.idle.servers.baseProfit
+        cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, (profile.servers || 0) + i)
         profile.servers = (profile.servers || 0) + 1
         response = getUpgrade('servers', profile.servers)?.response || ''
         break
@@ -64,9 +61,9 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
       const timeUntilCanAfford = idleGameEngine.calculateMillisecondsTillBuyable(
         profile.currency,
         cost,
-        idleGameEngine.calculateProfit(level, baseProfit, profile.prestigeMultiplier)
+        idleGameEngine.calculateTotalProfit(profile)
       )
-      console.log(timeUntilCanAfford)
+
       message.channel.createMessage(
         language(`gaming/idrupgrade:NEED_BOOSTS`, {
           cost: cost.toFixed(2),

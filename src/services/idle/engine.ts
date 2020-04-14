@@ -1,5 +1,8 @@
 // This is the game engine for the Idle Games in the bot.
 
+import { GamerIdleDiscordRevolution } from '../../database/schemas/idlediscordrevolution'
+import constants from '../../constants'
+
 function prestige() {
   // This function will reset ur entire game to 0. However it will increase your multiplier so you can get back faster and faster. Prestige is usually necessary to reach certain parts of the game.
   console.log('Prestiged')
@@ -8,10 +11,6 @@ function prestige() {
 function upgrade(item: string) {
   // This function is used to upgrade something. It costs some currency and upgrades it
   console.log('upgrading', item)
-}
-
-function process() {
-  // This function will be processing the amount of currency users have everytime they use a command to view their currency i imagine
 }
 
 function viewAd() {
@@ -55,6 +54,23 @@ function calculateProfit(level: number, baseProfit = 1, prestige = 1) {
   return level * baseProfit * multiplier * prestige
 }
 
+function calculateTotalProfit(profile: GamerIdleDiscordRevolution) {
+  let subtotal = 0
+
+  if (profile.friends)
+    subtotal += calculateProfit(profile.friends, constants.idle.friends.baseProfit, profile.prestigeMultiplier)
+  if (profile.servers)
+    subtotal += calculateProfit(profile.servers, constants.idle.servers.baseProfit, profile.prestigeMultiplier)
+
+  return subtotal
+}
+
+/** This function will be processing the amount of currency users have everytime they use a command to view their currency i imagine */
+async function process(profile: GamerIdleDiscordRevolution) {
+  profile.currency += calculateTotalProfit(profile)
+  await profile.save()
+}
+
 export const idleGameEngine = {
   prestige,
   upgrade,
@@ -63,5 +79,6 @@ export const idleGameEngine = {
   reset,
   calculateMillisecondsTillBuyable,
   calculateProfit,
-  calculateUpgradeCost
+  calculateUpgradeCost,
+  calculateTotalProfit
 }
