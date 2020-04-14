@@ -68,8 +68,10 @@ function calculateTotalProfit(profile: GamerIdleDiscordRevolution) {
 
 /** This function will be processing the amount of currency users have everytime they use a command to view their currency i imagine */
 async function process(profile: GamerIdleDiscordRevolution) {
-  const secondsSinceLastUpdate = (Date.now() - profile.lastUpdatedAt) / milliseconds.SECOND
+  const now = Date.now()
+  const secondsSinceLastUpdate = (now - profile.lastUpdatedAt) / milliseconds.SECOND
   profile.currency += calculateTotalProfit(profile) * secondsSinceLastUpdate
+  profile.lastUpdatedAt = now
   await profile.save()
 }
 

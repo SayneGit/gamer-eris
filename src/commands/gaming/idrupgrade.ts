@@ -96,8 +96,8 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
       name: category,
       level: finalLevel,
       emoji: constants.emojis.boosts,
-      left: Math.ceil(profile.currency),
-      cost: Math.ceil(totalCost)
+      left: Math.ceil(profile.currency).toLocaleString(),
+      cost: Math.ceil(totalCost).toLocaleString()
     })
   )
 })
