@@ -13,7 +13,7 @@ export default new Command([`idrcreate`, `idrc`], async (message, _args, context
   if (exists) return message.channel.createMessage(language(`gaming/idrcreate:EXISTS`))
 
   // Create the database object
-  Gamer.database.models.idlediscordrevolution.create({ userID: message.author.id })
+  Gamer.database.models.idlediscordrevolution.create({ userID: message.author.id, lastUpdatedAt: Date.now() })
   const prefix = Gamer.guildPrefixes.get(message.guildID) || Gamer.prefix
 
   return message.channel.createMessage(
