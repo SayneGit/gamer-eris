@@ -55,6 +55,10 @@ function calculateProfit(level: number, baseProfit = 1, prestige = 1) {
   return level * baseProfit * multiplier * prestige
 }
 
+function isEpicUpgrade(level: number) {
+  return [1, 25, 50, 75, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 2000].includes(level)
+}
+
 function calculateTotalProfit(profile: GamerIdleDiscordRevolution) {
   let subtotal = 0
 
@@ -84,5 +88,6 @@ export const idleGameEngine = {
   calculateMillisecondsTillBuyable,
   calculateProfit,
   calculateUpgradeCost,
-  calculateTotalProfit
+  calculateTotalProfit,
+  isEpicUpgrade
 }

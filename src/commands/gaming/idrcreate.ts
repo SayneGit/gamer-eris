@@ -16,7 +16,8 @@ export default new Command([`idrcreate`, `idrc`], async (message, _args, context
   Gamer.database.models.idlediscordrevolution.create({ userID: message.author.id, lastUpdatedAt: Date.now() })
   const prefix = Gamer.guildPrefixes.get(message.guildID) || Gamer.prefix
 
-  return message.channel.createMessage(
+  return Gamer.helpers.discord.embedResponse(
+    message,
     language(`gaming/idrcreate:STARTED`, { emoji: constants.emojis.boosts, mention: message.author.mention, prefix })
   )
 })

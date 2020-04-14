@@ -2,6 +2,7 @@ import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import constants from '../../constants'
 import { idleGameEngine } from '../../services/idle/engine'
+import { MessageEmbed, userTag } from 'helperis'
 
 function getUpgrade(type: 'friends' | 'servers', level: number) {
   const upgrade =
@@ -35,6 +36,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   const buyMax = number?.toLowerCase() === `max`
   let finalLevel = 0
   let totalCost = 0
+  let title = ''
 
   for (let i = 1; i <= amount; i++) {
     // Check the cost of this item
@@ -46,11 +48,13 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
         cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, profile.friends + i)
         profile.friends = profile.friends + 1
         response = getUpgrade('friends', profile.friends)?.response || ''
+        title = getUpgrade('friends', profile.friends)?.title || ''
         break
       case 'servers':
         cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, profile.servers + i)
         profile.servers = profile.servers + 1
         response = getUpgrade('servers', profile.servers)?.response || ''
+        title = getUpgrade('servers', profile.servers)?.title || ''
         break
       default:
         // SOMETHING WENT TERRIBLY WRONG
@@ -94,8 +98,18 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
     totalCost += cost
     // The user can afford this so we need to make the purchase for the user
     profile.currency -= cost
+
     // If this level has a story message response, we should send it now
-    if (response) message.channel.createMessage(language(response, { mention: message.author.mention }))
+    if (response) {
+      const embed = new MessageEmbed()
+        .setAuthor(userTag(message.author), message.author.avatarURL)
+        .setDescription(language(response, { mention: message.author.mention }))
+        .setColor('RANDOM')
+
+      if (idleGameEngine.isEpicUpgrade(finalLevel) && title) embed.setFooter(language(title))
+
+      message.channel.createMessage({ embed: embed.code })
+    }
   }
 
   // If there was no level changes we quitely error out. The response will have been sent above
@@ -106,15 +120,21 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
   Gamer.helpers.levels.completeMission(message.member, `idrupgrade`, message.guildID)
 
-  return Gamer.helpers.discord.embedResponse(
-    message,
-    language(`gaming/idrupgrade:UPGRADED`, {
-      name: category,
-      level: finalLevel,
-      emoji: constants.emojis.boosts,
-      left: Math.round(profile.currency).toLocaleString(),
-      cost: Math.round(totalCost).toLocaleString(),
-      profit: Math.round(idleGameEngine.calculateTotalProfit(profile)).toLocaleString()
-    })
-  )
+  const embed = new MessageEmbed()
+    .setAuthor(userTag(message.author), message.author.avatarURL)
+    .setDescription(
+      language(`gaming/idrupgrade:UPGRADED`, {
+        name: category,
+        level: finalLevel,
+        emoji: constants.emojis.boosts,
+        left: Math.round(profile.currency).toLocaleString(),
+        cost: Math.round(totalCost).toLocaleString(),
+        profit: Math.round(idleGameEngine.calculateTotalProfit(profile)).toLocaleString()
+      })
+    )
+    .setColor('RANDOM')
+
+  if (title) embed.setFooter(language(title))
+
+  return message.channel.createMessage({ embed: embed.code })
 })
