@@ -23,7 +23,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
   // First we update this users currency since the last time they were active
   await idleGameEngine.process(profile)
-  
+
   const allowedItems = ['friends', 'servers']
 
   const [type, number] = args
@@ -42,13 +42,13 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
     switch (category) {
       case 'friends':
-        cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, (profile.friends || 0) + i)
-        profile.friends = (profile.friends || 0) + 1
+        cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, profile.friends + i)
+        profile.friends = profile.friends + 1
         response = getUpgrade('friends', profile.friends)?.response || ''
         break
       case 'servers':
-        cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, (profile.servers || 0) + i)
-        profile.servers = (profile.servers || 0) + 1
+        cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, profile.servers + i)
+        profile.servers = profile.servers + 1
         response = getUpgrade('servers', profile.servers)?.response || ''
         break
       default:
@@ -77,7 +77,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
       break
     }
 
-    finalLevel = profile.friends || 0
+    finalLevel = profile.friends
     totalCost += cost
     // The user can afford this so we need to make the purchase for the user
     profile.currency -= cost
