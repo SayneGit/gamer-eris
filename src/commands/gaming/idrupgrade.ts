@@ -66,11 +66,12 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
         cost,
         idleGameEngine.calculateProfit(level, baseProfit, profile.prestigeMultiplier)
       )
-
+      console.log(timeUntilCanAfford)
       message.channel.createMessage(
         language(`gaming/idrupgrade:NEED_BOOSTS`, {
-          cost,
-          current: profile.currency,
+          cost: cost.toFixed(2),
+          current: profile.currency.toFixed(2),
+          emoji: constants.emojis.boosts,
           time: Gamer.helpers.transform.humanizeMilliseconds(timeUntilCanAfford)
         })
       )
@@ -79,7 +80,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
       break
     }
 
-    finalLevel = level
+    finalLevel = profile.friends || 0
     totalCost += cost
     // The user can afford this so we need to make the purchase for the user
     profile.currency -= cost
@@ -89,7 +90,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
   // If there was no level changes we quitely error out. The response will have been sent above
   if (!finalLevel) return
-
+  console.log(profile)
   // Now that all upgrades have completed, we can save the profile
   profile.save()
 
@@ -98,8 +99,8 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
       name: category,
       level: finalLevel,
       emoji: constants.emojis.boosts,
-      left: profile.currency,
-      cost: totalCost
+      left: Math.ceil(profile.currency),
+      cost: Math.ceil(totalCost)
     })
   )
 })
