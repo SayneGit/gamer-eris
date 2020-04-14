@@ -53,56 +53,34 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
         return
       }
 
-      const options = [
-        `title`,
-        `description`,
-        `platform`,
-        `game`,
-        `activity`,
-        `background`,
-        `attendees`,
-        `repeat`,
-        `remove`,
-        `dm`,
-        `dms`,
-        `showattendees`,
-        `reminder`,
-        `frequency`,
-        `duration`,
-        `start`,
-        `allowedrole`,
-        `alertrole`,
-        `template`
-      ]
-
       const args = msg.content.split(' ')
       const [type, ...fullValue] = args
       const [value] = fullValue
-      if (!options.includes(type.toLowerCase())) {
-        message.channel.createMessage(language(`events/eventcreate:INVALID_EDIT`, { mention: msg.author.mention }))
-        return
-      }
-
       const roleID = message.roleMentions.length ? message.roleMentions[0] : value
 
       let response = `events/eventedit:TITLE_UPDATED`
       switch (type.toLowerCase()) {
         case `title`:
+        case `1`:
           event.title = fullValue.join(' ')
           break
         case `description`:
+        case `2`:
           event.description = fullValue.join(' ')
           response = `events/eventedit:DESCRIPTION_UPDATED`
           break
         case `platform`:
+        case `6`:
           event.platform = fullValue.join(' ')
           response = `events/eventedit:PLATFORM_UPDATED`
           break
         case `game`:
+        case `7`:
           event.game = fullValue.join(' ')
           response = `events/eventedit:GAME_UPDATED`
           break
         case `activity`:
+        case `8`:
           event.activity = fullValue.join(' ')
           response = `events/eventedit:ACTIVITY_UPDATED`
           break
@@ -115,6 +93,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           response = `events/eventedit:BACKGROUND_UPDATED`
           break
         case `attendees`:
+        case `5`:
           const maxAttendees = parseInt(value, 10)
           if (!maxAttendees) return
           while (event.attendees.length < maxAttendees && event.waitingList.length)
@@ -132,6 +111,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           break
         case `dm`:
         case `dms`:
+        case `9`:
           event.dmReminders = !event.dmReminders
           response = `events/eventedit:DM_UPDATED`
           break
@@ -140,6 +120,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           response = `events/eventedit:SHOWATTENDEES_UPDATED`
           break
         case `reminder`:
+        case `4`:
           const reminder = Gamer.helpers.transform.stringToMilliseconds(value)
           if (!reminder) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
@@ -161,6 +142,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           response = `events/eventedit:FREQUENCY_UPDATED`
           break
         case `duration`:
+        case `3`:
           const duration = Gamer.helpers.transform.stringToMilliseconds(value)
           if (!duration) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
@@ -172,6 +154,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           response = `events/eventedit:DURATION_UPDATED`
           break
         case `start`:
+        case `12`:
           const start = Gamer.helpers.transform.stringToMilliseconds(value)
           const startTime = new Date(fullValue.join(' ')).getTime()
 
@@ -185,6 +168,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           response = `events/eventedit:START_UPDATED`
           break
         case `allowedrole`:
+        case `10`:
           const allowedRole =
             msg.member.guild.roles.get(roleID) ||
             msg.member.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
@@ -199,6 +183,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           response = `events/eventedit:ALLOWEDROLE_UPDATED`
           break
         case `alertrole`:
+        case `11`:
           const roleToAlert =
             msg.member.guild.roles.get(roleID) ||
             msg.member.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
@@ -219,7 +204,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           break
         default:
           // If they used the command wrong show them the help
-          msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
+          message.channel.createMessage(language(`events/eventcreate:INVALID_EDIT`, { mention: msg.author.mention }))
           return
       }
 
