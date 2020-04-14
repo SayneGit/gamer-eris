@@ -4,8 +4,8 @@
   "USAGE": "{{prefix}}idrupgrade",
   "ALIASES": "{{prefix}}idru",
 	"EXISTS": "You have no {{emoji}} boosts to make your first upgrade. To start, use the **idrcreate** command to create your own profile and get some free boosts to make your first purchase.",
-	"NEED_BOOSTS": "You do not have enough {{emoji}} to buy this upgrade. It costs {{cost}} {{emoji}} for this upgrade and you only have {{current}} {{emoji}}. It will take {{time}} until you can afford to make this upgrade. Please try again later.",
-	"UPGRADED": "Upgraded {{name}} to level {{level}} for {{cost}} {{emoji}}. You have {{left}} {{emoji}} left.",
+	"NEED_BOOSTS": "You do not have enough {{emoji}} to buy this upgrade. It costs {{cost}} {{emoji}} for this upgrade and you only have {{current}} {{emoji}}. It will take `{{time}}` until you can afford to make this upgrade. Please try again later.",
+	"UPGRADED": "🎉 Upgraded {{name}} to level {{level}} for {{cost}} {{emoji}}. You have {{left}} {{emoji}} left. You are now earning {{profit}} {{emoji}} per second.",
 	"FRIENDS_1_TITLE": "The friend who always forgets you and doesn't respond to your messages.",
-	"FRIENDS_1_RESPONSE": "Congrats, you just took your first step towards the Discord Revolution. By gathering many friends, we can begin to gather the necessary talents needed to learn all of Discord's most private secrets. It is time for the Discord Revolution! LONG LIVE THE REVOLUTION!"
+	"FRIENDS_1_RESPONSE": "🎉 {{mention}}, congrats, you just took your first step towards the Discord Revolution. By gathering many friends, we can begin to gather the necessary talents needed to learn all of Discord's most private secrets. It is time for the Discord Revolution! LONG LIVE THE REVOLUTION!"
 }

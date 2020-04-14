@@ -32,6 +32,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   if (!allowedItems.includes(category)) return helpCommand?.process(message, [`idrupgrade`], context)
 
   const amount = Number(number) || 1
+  const buyMax = number?.toLowerCase() === `max`
   let finalLevel = 0
   let totalCost = 0
 
@@ -64,20 +65,32 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
         idleGameEngine.calculateTotalProfit(profile)
       )
 
-      message.channel.createMessage(
-        language(`gaming/idrupgrade:NEED_BOOSTS`, {
-          cost: cost.toFixed(2),
-          current: profile.currency.toFixed(2),
-          emoji: constants.emojis.boosts,
-          time: Gamer.helpers.transform.humanizeMilliseconds(timeUntilCanAfford)
-        })
-      )
+      if (!buyMax)
+        message.channel.createMessage(
+          language(`gaming/idrupgrade:NEED_BOOSTS`, {
+            cost: cost.toFixed(2),
+            current: profile.currency.toFixed(2),
+            emoji: constants.emojis.boosts,
+            time: Gamer.helpers.transform.humanizeMilliseconds(timeUntilCanAfford) || '1s'
+          })
+        )
 
       // User can't afford anymore so break the loop
       break
     }
 
-    finalLevel = profile.friends
+    switch (category) {
+      case 'friends':
+        finalLevel = profile.friends
+        break
+      case 'servers':
+        finalLevel = profile.servers
+        break
+      default:
+        // SOMETHING WENT TERRIBLY WRONG
+        return Gamer.helpers.logger.yellow('[ERROR] Invalid category provided to IDRUPGRADE command.')
+    }
+
     totalCost += cost
     // The user can afford this so we need to make the purchase for the user
     profile.currency -= cost
@@ -87,7 +100,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
   // If there was no level changes we quitely error out. The response will have been sent above
   if (!finalLevel) return
-  console.log(profile)
+
   // Now that all upgrades have completed, we can save the profile
   profile.save()
 
@@ -96,8 +109,9 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
       name: category,
       level: finalLevel,
       emoji: constants.emojis.boosts,
-      left: Math.ceil(profile.currency).toLocaleString(),
-      cost: Math.ceil(totalCost).toLocaleString()
+      left: Math.round(profile.currency).toLocaleString(),
+      cost: Math.round(totalCost).toLocaleString(),
+      profit: Math.round(idleGameEngine.calculateTotalProfit(profile)).toLocaleString()
     })
   )
 })
