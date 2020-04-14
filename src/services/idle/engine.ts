@@ -2,6 +2,7 @@
 
 import { GamerIdleDiscordRevolution } from '../../database/schemas/idlediscordrevolution'
 import constants from '../../constants'
+import { milliseconds } from '../../lib/types/enums/time'
 
 function prestige() {
   // This function will reset ur entire game to 0. However it will increase your multiplier so you can get back faster and faster. Prestige is usually necessary to reach certain parts of the game.
@@ -67,7 +68,8 @@ function calculateTotalProfit(profile: GamerIdleDiscordRevolution) {
 
 /** This function will be processing the amount of currency users have everytime they use a command to view their currency i imagine */
 async function process(profile: GamerIdleDiscordRevolution) {
-  profile.currency += calculateTotalProfit(profile)
+  const secondsSinceLastUpdate = (Date.now() - profile.lastUpdatedAt) / milliseconds.SECOND
+  profile.currency += calculateTotalProfit(profile) * secondsSinceLastUpdate
   await profile.save()
 }
 
