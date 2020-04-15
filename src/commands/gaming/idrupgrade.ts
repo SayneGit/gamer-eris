@@ -48,13 +48,13 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
         cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, profile.friends + i)
         profile.friends = profile.friends + 1
         response = getUpgrade('friends', profile.friends)?.response || ''
-        title = getUpgrade('friends', profile.friends)?.title || ''
+        title = getUpgrade('friends', profile.friends)?.title || idleGameEngine.currentTitle('friends', profile.friends)
         break
       case 'servers':
         cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, profile.servers + i)
         profile.servers = profile.servers + 1
         response = getUpgrade('servers', profile.servers)?.response || ''
-        title = getUpgrade('servers', profile.servers)?.title || ''
+        title = getUpgrade('servers', profile.servers)?.title || idleGameEngine.currentTitle('servers', profile.servers)
         break
       default:
         // SOMETHING WENT TERRIBLY WRONG
