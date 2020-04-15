@@ -4,6 +4,7 @@ import { Message, Member } from 'eris'
 import GamerClient from '../structures/GamerClient'
 import Constants from '../../constants/index'
 import constants from '../../constants/index'
+import { idleGameEngine } from '../../services/idle/engine'
 
 interface ProfileCanvasOptions {
   style?: string
@@ -65,14 +66,15 @@ export default class {
   }
 
   async makeCanvas(message: Message, member: Member, Gamer: GamerClient, options?: ProfileCanvasOptions) {
-    const [memberSettings, userSettings, isMarried, isSpouse] = await Promise.all([
+    const [memberSettings, userSettings, isMarried, isSpouse, idleProfile] = await Promise.all([
       Gamer.database.models.member.findOne({
         memberID: member.id,
         guildID: member.guild.id
       }),
       Gamer.database.models.user.findOne({ userID: member.id }),
       Gamer.database.models.marriage.findOne({ authorID: member.id }),
-      Gamer.database.models.marriage.findOne({ spouseID: member.id })
+      Gamer.database.models.marriage.findOne({ spouseID: member.id }),
+      Gamer.database.models.idlediscordrevolution.findOne({ userID: member.id })
     ])
 
     // Select the background theme & id from their settings if no override options were provided
@@ -224,6 +226,20 @@ export default class {
       .setColor(mode.clanName)
       .setTextFont(`16px LatoBold`)
       .addText(language('leveling/profile:COINS', { amount: userSettings?.leveling.currency || 0 }), 600, 463)
+      .addText(
+        language('leveling/profile:BOOSTS', {
+          amount: idleProfile ? Math.round(idleProfile.currency).toLocaleString() : 0
+        }),
+        600,
+        483
+      )
+      .addText(
+        language('leveling/profile:PROFITS', {
+          amount: idleProfile ? Math.round(idleGameEngine.calculateTotalProfit(idleProfile)).toLocaleString() : 0
+        }),
+        600,
+        503
+      )
       .setColor(mode.userdivider)
       .addRect(158, 135, 240, 2)
       .setColor(mode.username)

@@ -2,6 +2,7 @@ import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import constants from '../../constants'
 import { idleGameEngine } from '../../services/idle/engine'
+import { MessageEmbed, userTag } from 'helperis'
 
 function getUpgrade(type: 'friends' | 'servers', level: number) {
   const upgrade =
@@ -23,7 +24,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
   // First we update this users currency since the last time they were active
   await idleGameEngine.process(profile)
-  
+
   const allowedItems = ['friends', 'servers']
 
   const [type, number] = args
@@ -32,8 +33,10 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   if (!allowedItems.includes(category)) return helpCommand?.process(message, [`idrupgrade`], context)
 
   const amount = Number(number) || 1
+  const buyMax = number?.toLowerCase() === `max`
   let finalLevel = 0
   let totalCost = 0
+  let title = ''
 
   for (let i = 1; i <= amount; i++) {
     // Check the cost of this item
@@ -42,14 +45,16 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
 
     switch (category) {
       case 'friends':
-        cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, (profile.friends || 0) + i)
-        profile.friends = (profile.friends || 0) + 1
+        cost = idleGameEngine.calculateUpgradeCost(constants.idle.friends.baseCost, profile.friends + i)
+        profile.friends = profile.friends + 1
         response = getUpgrade('friends', profile.friends)?.response || ''
+        title = getUpgrade('friends', profile.friends)?.title || idleGameEngine.currentTitle('friends', profile.friends)
         break
       case 'servers':
-        cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, (profile.servers || 0) + i)
-        profile.servers = (profile.servers || 0) + 1
+        cost = idleGameEngine.calculateUpgradeCost(constants.idle.servers.baseCost, profile.servers + i)
+        profile.servers = profile.servers + 1
         response = getUpgrade('servers', profile.servers)?.response || ''
+        title = getUpgrade('servers', profile.servers)?.title || idleGameEngine.currentTitle('servers', profile.servers)
         break
       default:
         // SOMETHING WENT TERRIBLY WRONG
@@ -64,40 +69,72 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
         idleGameEngine.calculateTotalProfit(profile)
       )
 
-      message.channel.createMessage(
-        language(`gaming/idrupgrade:NEED_BOOSTS`, {
-          cost: cost.toFixed(2),
-          current: profile.currency.toFixed(2),
-          emoji: constants.emojis.boosts,
-          time: Gamer.helpers.transform.humanizeMilliseconds(timeUntilCanAfford)
-        })
-      )
+      if (!buyMax)
+        message.channel.createMessage(
+          language(`gaming/idrupgrade:NEED_BOOSTS`, {
+            cost: cost.toFixed(2),
+            current: profile.currency.toFixed(2),
+            emoji: constants.emojis.boosts,
+            time: Gamer.helpers.transform.humanizeMilliseconds(timeUntilCanAfford) || '1s'
+          })
+        )
 
       // User can't afford anymore so break the loop
       break
     }
 
-    finalLevel = profile.friends || 0
+    switch (category) {
+      case 'friends':
+        finalLevel = profile.friends
+        break
+      case 'servers':
+        finalLevel = profile.servers
+        break
+      default:
+        // SOMETHING WENT TERRIBLY WRONG
+        return Gamer.helpers.logger.yellow('[ERROR] Invalid category provided to IDRUPGRADE command.')
+    }
+
     totalCost += cost
     // The user can afford this so we need to make the purchase for the user
     profile.currency -= cost
+
     // If this level has a story message response, we should send it now
-    if (response) message.channel.createMessage(language(response, { mention: message.author.mention }))
+    if (response) {
+      const embed = new MessageEmbed()
+        .setAuthor(userTag(message.author), message.author.avatarURL)
+        .setDescription(language(response, { mention: message.author.mention }))
+        .setColor('RANDOM')
+
+      if (idleGameEngine.isEpicUpgrade(finalLevel) && title) embed.setFooter(language(title))
+
+      message.channel.createMessage({ embed: embed.code })
+    }
   }
 
   // If there was no level changes we quitely error out. The response will have been sent above
   if (!finalLevel) return
-  console.log(profile)
+
   // Now that all upgrades have completed, we can save the profile
   profile.save()
 
-  return message.channel.createMessage(
-    language(`gaming/idrupgrade:UPGRADED`, {
-      name: category,
-      level: finalLevel,
-      emoji: constants.emojis.boosts,
-      left: Math.ceil(profile.currency),
-      cost: Math.ceil(totalCost)
-    })
-  )
+  Gamer.helpers.levels.completeMission(message.member, `idrupgrade`, message.guildID)
+
+  const embed = new MessageEmbed()
+    .setAuthor(userTag(message.author), message.author.avatarURL)
+    .setDescription(
+      language(`gaming/idrupgrade:UPGRADED`, {
+        name: category,
+        level: finalLevel,
+        emoji: constants.emojis.boosts,
+        left: Math.round(profile.currency).toLocaleString(),
+        cost: Math.round(totalCost).toLocaleString(),
+        profit: Math.round(idleGameEngine.calculateTotalProfit(profile)).toLocaleString()
+      })
+    )
+    .setColor('RANDOM')
+
+  if (title) embed.setFooter(language(title))
+
+  return message.channel.createMessage({ embed: embed.code })
 })

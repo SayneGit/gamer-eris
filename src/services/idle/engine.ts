@@ -2,6 +2,20 @@
 
 import { GamerIdleDiscordRevolution } from '../../database/schemas/idlediscordrevolution'
 import constants from '../../constants'
+import { milliseconds } from '../../lib/types/enums/time'
+
+const epicUpgradeLevels = [1, 25, 50, 75, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 2000]
+export type IdleDiscordRevolutionTypes =
+  | 'friends'
+  | 'servers'
+  | 'channels'
+  | 'roles'
+  | 'permissions'
+  | 'messages'
+  | 'invites'
+  | 'bots'
+  | 'hypesquads'
+  | 'nitro'
 
 function prestige() {
   // This function will reset ur entire game to 0. However it will increase your multiplier so you can get back faster and faster. Prestige is usually necessary to reach certain parts of the game.
@@ -54,6 +68,17 @@ function calculateProfit(level: number, baseProfit = 1, prestige = 1) {
   return level * baseProfit * multiplier * prestige
 }
 
+function isEpicUpgrade(level: number) {
+  return epicUpgradeLevels.includes(level)
+}
+
+function currentTitle(type: IdleDiscordRevolutionTypes, level: number) {
+  let title = ''
+  for (const [key, upgrade] of constants.idle[type].upgrades.entries()) if (key < level) title = upgrade.title
+
+  return title
+}
+
 function calculateTotalProfit(profile: GamerIdleDiscordRevolution) {
   let subtotal = 0
 
@@ -67,7 +92,10 @@ function calculateTotalProfit(profile: GamerIdleDiscordRevolution) {
 
 /** This function will be processing the amount of currency users have everytime they use a command to view their currency i imagine */
 async function process(profile: GamerIdleDiscordRevolution) {
-  profile.currency += calculateTotalProfit(profile)
+  const now = Date.now()
+  const secondsSinceLastUpdate = (now - profile.lastUpdatedAt) / milliseconds.SECOND
+  profile.currency += calculateTotalProfit(profile) * secondsSinceLastUpdate
+  profile.lastUpdatedAt = now
   await profile.save()
 }
 
@@ -80,5 +108,7 @@ export const idleGameEngine = {
   calculateMillisecondsTillBuyable,
   calculateProfit,
   calculateUpgradeCost,
-  calculateTotalProfit
+  calculateTotalProfit,
+  isEpicUpgrade,
+  currentTitle
 }
