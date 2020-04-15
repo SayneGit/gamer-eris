@@ -1,12 +1,12 @@
 {
-  "DESCRIPTION": "Start a Idle Discord Revolution game.",
-  "EXTENDED": "Starts a Idle Discord Revolution game.",
+  "DESCRIPTION": "Starts the Idle Discord Revolution game.",
+  "EXTENDED": "Creates a new Idle Discord Revolution profile. The game will guide you through the necessary steps to starting your very own Discord Revolution!",
   "USAGE": "{{prefix}}idrcreate",
   "ALIASES": "{{prefix}}idrc",
   "EXISTS": "You have reached the maximum amount of profiles in the Idle Discord Revolution game. Please delete one before starting a new game.",
   "STARTED": "$t(gaming/idrcreate:STARTED_1)\n\n$t(gaming/idrcreate:STARTED_2)\n\n$t(gaming/idrcreate:STARTED_3)\n\n$t(gaming/idrcreate:STARTED_4)\n\n$t(gaming/idrcreate:STARTED_5)",
   "STARTED_1": "Hey there, {{mention}}! :wave:",
-  "STARTED_2": "I heard that you are interested in starting a *Discord Revolution!* I am Edylc, I'll be teaching you how to make your Revolution a success!",
+  "STARTED_2": "I heard that you are interested in starting a *Discord Revolution!* I am Edylc, I'll be teaching you how to make your Revolution a success! 🎉",
   "STARTED_3": "First things first, we'll need to gather some friends (but that costs money). To start you off, **here's 10 free cash!** {{emoji}} You can use them to find a friend who can help you on your Revolution. Currently, **you're earning 0 {{emoji}}**. To make a purchase or an upgrade, we'll have to do it secretly so Discord won't find out... 🕵️",
   "STARTED_4": "To make purchases, I have provided you with a confidential command: `{{prefix}}idrupgrade`. Use it wisely to purchase your first free friend! 💗",
   "STARTED_5": "***LONG LIVE THE REVOLUTION!***"
