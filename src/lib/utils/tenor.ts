@@ -3,6 +3,7 @@ import { Message } from 'eris'
 import { MessageEmbed } from 'helperis'
 import { TenorGif } from '../types/tenor'
 import fetch from 'node-fetch'
+import { completeMarriageTask } from './marriage'
 
 export default class {
   Gamer: GamerClient
@@ -42,7 +43,7 @@ export default class {
         .then(res => res.json())
         .catch(() => undefined)
 
-      if (!data || !data.results.length) return message.channel.createMessage(language(`fun/advice:ERROR`))
+      if (!data || !data.results?.length) return message.channel.createMessage(language(`fun/advice:ERROR`))
       const randomResult = this.Gamer.helpers.utils.chooseRandom(data.results)
       const [media] = randomResult.media
 
@@ -50,6 +51,8 @@ export default class {
     }
 
     message.channel.createMessage({ embed: embed.code })
+
+    if (user.id !== message.author.id) completeMarriageTask(message, commandName)
 
     return message.member
       ? this.Gamer.helpers.levels.completeMission(message.member, commandName, message.guildID)

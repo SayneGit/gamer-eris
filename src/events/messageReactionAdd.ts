@@ -1,4 +1,4 @@
-import { PossiblyUncachedMessage, Message, PrivateChannel, User, TextChannel, GroupChannel } from 'eris'
+import { PossiblyUncachedMessage, Message, PrivateChannel, User, TextChannel, GroupChannel, Guild } from 'eris'
 import Event from '../lib/structures/Event'
 import { ReactionEmoji } from '../lib/types/discord'
 import constants from '../constants'
@@ -17,9 +17,18 @@ const feedbackEmojis = [
   constants.emojis.redX
 ]
 
+const randomRepliesNetwork = [
+  'network/reaction:THANKS_LIKED',
+  'network/reaction:THANKS_LIKED_1',
+  'network/reaction:THANKS_LIKED_2'
+]
+
 export default class extends Event {
   async execute(rawMessage: PossiblyUncachedMessage, emoji: ReactionEmoji, userID: string) {
     if (rawMessage.channel instanceof PrivateChannel || rawMessage.channel instanceof GroupChannel) return
+
+    const guild = rawMessage.channel.guild
+    if (!guild) return
 
     const user = await Gamer.helpers.discord.fetchUser(Gamer, userID)
     if (!user || user.bot) return
@@ -40,18 +49,19 @@ export default class extends Event {
     if (!(rawMessage instanceof Message)) message.channel = rawMessage.channel
 
     // Message might be from other users
-    this.handleReactionRole(message, emoji, userID)
+    this.handleReactionRole(message, emoji, userID, guild)
+    this.handleAutoRole(message, guild, userID)
 
     // Messages must be from Gamer
     if (message.author.id !== Gamer.user.id) return
 
-    this.handleProfileReaction(message, emoji, user)
-    this.handleEventReaction(message, emoji, userID)
-    this.handleNetworkReaction(message, emoji, user)
-    this.handleFeedbackReaction(message, emoji, user)
+    this.handleProfileReaction(message, emoji, user, guild)
+    this.handleEventReaction(message, emoji, userID, guild)
+    this.handleNetworkReaction(message, emoji, user, guild)
+    this.handleFeedbackReaction(message, emoji, user, guild)
   }
 
-  async handleEventReaction(message: Message, emoji: ReactionEmoji, userID: string) {
+  async handleEventReaction(message: Message, emoji: ReactionEmoji, userID: string, guild: Guild) {
     if (!eventEmojis.length) {
       const emojis = [constants.emojis.greenTick, constants.emojis.redX]
 
@@ -66,7 +76,7 @@ export default class extends Event {
     const event = await Gamer.database.models.event.findOne({ adMessageID: message.id })
     if (!event) return
 
-    const language = Gamer.getLanguage(message.member.guild.id)
+    const language = Gamer.getLanguage(guild.id)
 
     const [joinEmojiID, denyEmojiID] = [constants.emojis.greenTick, constants.emojis.redX].map(e =>
       Gamer.helpers.discord.convertEmoji(e, `id`)
@@ -78,7 +88,7 @@ export default class extends Event {
     const joinReaction = Gamer.helpers.discord.convertEmoji(constants.emojis.greenTick, `reaction`)
     if (!joinReaction) return
 
-    const member = await Gamer.helpers.discord.fetchMember(message.member.guild, userID)
+    const member = await Gamer.helpers.discord.fetchMember(guild, userID)
     if (!member) return
 
     switch (emoji.id) {
@@ -107,29 +117,25 @@ export default class extends Event {
     }
   }
 
-  async handleReactionRole(message: Message, emoji: ReactionEmoji, userID: string) {
-    if (!message.member) return
-
-    const member = await Gamer.helpers.discord.fetchMember(message.member.guild, userID)
+  async handleReactionRole(message: Message, emoji: ReactionEmoji, userID: string, guild: Guild) {
+    const member = await Gamer.helpers.discord.fetchMember(guild, userID)
     if (!member) return
 
-    const botMember = await Gamer.helpers.discord.fetchMember(message.member.guild, Gamer.user.id)
+    const botMember = await Gamer.helpers.discord.fetchMember(guild, Gamer.user.id)
     if (!botMember || !botMember.permission.has(`manageRoles`)) return
 
     const botsHighestRole = highestRole(botMember)
 
-    const reactionRole = await Gamer.database.models.reactionRole.findOne({
-      messageID: message.id
-    })
+    const reactionRole = await Gamer.database.models.reactionRole.findOne({ messageID: message.id })
     if (!reactionRole) return
 
-    const emojiKey = `${emoji.name}:${emoji.id}`
+    const emojiKey = `${emoji.name}:${emoji.id}`.toLowerCase()
 
-    const relevantReaction = reactionRole.reactions.find(r => r.reaction === emojiKey)
-    if (!relevantReaction || !relevantReaction.roleIDs.length) return
+    const relevantReaction = reactionRole.reactions.find(r => r.reaction.toLowerCase() === emojiKey)
+    if (!relevantReaction) return
 
     for (const roleID of relevantReaction.roleIDs) {
-      const role = message.member.guild.roles.get(roleID)
+      const role = guild.roles.get(roleID)
       if (!role || role.position > botsHighestRole.position) continue
 
       if (member.roles.includes(roleID)) member.removeRole(roleID, `Removed role for clicking reaction role.`)
@@ -137,20 +143,18 @@ export default class extends Event {
     }
   }
 
-  async handleProfileReaction(message: Message, emoji: ReactionEmoji, user: User) {
-    if (!message.member) return
-
+  async handleProfileReaction(message: Message, emoji: ReactionEmoji, user: User, guild: Guild) {
     const fullEmojiName = `<:${emoji.name}:${emoji.id}>`
     if (constants.emojis.discord !== fullEmojiName || !message.embeds.length) return
 
-    const language = Gamer.getLanguage(message.member.guild.id)
+    const language = Gamer.getLanguage(guild.id)
 
     const [embed] = message.embeds
     if (embed.title !== language(`leveling/profile:CURRENT_MISSIONS`)) return
     Gamer.amplitude.push({
       authorID: message.author.id,
       channelID: message.channel.id,
-      guildID: message.member.guild.id,
+      guildID: guild.id,
       messageID: message.id,
       timestamp: message.timestamp,
       type: 'PROFILE_INVITE'
@@ -162,8 +166,7 @@ export default class extends Event {
     } catch {}
   }
 
-  async handleNetworkReaction(message: Message, emoji: ReactionEmoji, user: User) {
-    if (!message.member) return
+  async handleNetworkReaction(message: Message, emoji: ReactionEmoji, user: User, guild: Guild) {
     const fullEmojiName = `<:${emoji.name}:${emoji.id}>`
 
     if (!networkReactions.includes(fullEmojiName) || !message.embeds.length) return
@@ -207,13 +210,15 @@ export default class extends Event {
         case constants.emojis.heart: {
           // Send a notification to the original authors notification channel saying x user liked it
           await notificationChannel.createMessage(
-            language(`network/reaction:LIKED`, { user: reactorTag, guildName: message.member.guild.name })
+            language(`network/reaction:LIKED`, { username: reactorTag, guildName: guild.name })
           )
           // Post the original embed so the user knows which post was liked
           await notificationChannel.createMessage({ embed: postEmbed })
 
           // Send a response like post delete it
-          const liked = await message.channel.createMessage(language(`network/reaction:THANKS_LIKED`))
+          const liked = await message.channel.createMessage(
+            language(Gamer.helpers.utils.chooseRandom(randomRepliesNetwork), { username: reactorTag })
+          )
           return setTimeout(() => liked.delete().catch(() => undefined), 10000)
         }
         case constants.emojis.repeat: {
@@ -266,7 +271,7 @@ export default class extends Event {
           await notificationChannel.createMessage(
             language(`network/reaction:REPOSTED`, {
               username: reactorTag,
-              guildName: message.member.guild.name,
+              guildName: guild.name,
               newGuildName: usersGuild.name
             })
           )
@@ -328,16 +333,14 @@ export default class extends Event {
       }
     } catch (error) {
       Gamer.emit('error', error)
-      const language = Gamer.getLanguage(message.member.guild.id)
+      const language = Gamer.getLanguage(guild.id)
 
       const response = await message.channel.createMessage(language(`network/reaction:FAILED`))
       return setTimeout(() => response.delete().catch(() => undefined), 10000)
     }
   }
 
-  async handleFeedbackReaction(message: Message, emoji: ReactionEmoji, user: User) {
-    if (!message.member) return
-
+  async handleFeedbackReaction(message: Message, emoji: ReactionEmoji, user: User, guild: Guild) {
     const fullEmojiName = `<:${emoji.name}:${emoji.id}>`
 
     if (!message.embeds.length || message.author.id !== Gamer.user.id) return
@@ -347,7 +350,7 @@ export default class extends Event {
     if (!feedback) return
 
     // Fetch the guild settings for this guild
-    const guildSettings = await Gamer.database.models.guild.findOne({ id: message.member.guild.id })
+    const guildSettings = await Gamer.database.models.guild.findOne({ id: guild.id })
     if (!guildSettings) return
 
     // Check if valid feedback channel
@@ -363,7 +366,7 @@ export default class extends Event {
     // Check if a valid emoji was used
     if (!feedbackEmojis.includes(fullEmojiName)) return
 
-    const reactorMember = await Gamer.helpers.discord.fetchMember(message.member.guild, user.id)
+    const reactorMember = await Gamer.helpers.discord.fetchMember(guild, user.id)
     if (!reactorMember) return
 
     const reactorIsMod = reactorMember.roles.some(id => guildSettings.staff.modRoleIDs.includes(id))
@@ -371,9 +374,9 @@ export default class extends Event {
       reactorMember.permission.has('administrator') ||
       (guildSettings.staff.adminRoleID && reactorMember.roles.includes(guildSettings.staff.adminRoleID))
 
-    const feedbackMember = await Gamer.helpers.discord.fetchMember(message.member.guild, feedback.authorID)
+    const feedbackMember = await Gamer.helpers.discord.fetchMember(guild, feedback.authorID)
 
-    const language = Gamer.getLanguage(message.member.guild.id)
+    const language = Gamer.getLanguage(guild.id)
 
     switch (fullEmojiName) {
       // This case will run if the reaction was the Mailbox reaction
@@ -384,7 +387,7 @@ export default class extends Event {
         if (!guildSettings.mails.enabled || !guildSettings.mails.categoryID) return
 
         const openMail = await Gamer.database.models.mail.findOne({
-          guildID: message.member.guild.id,
+          guildID: guild.id,
           userID: feedback.authorID
         })
         // The feedback author does not have any open mails
@@ -400,7 +403,7 @@ export default class extends Event {
           )
         }
         // They have an open mail so we can just send it there
-        const mailChannel = message.member.guild.channels.get(openMail.id)
+        const mailChannel = guild.channels.get(openMail.id)
         if (!mailChannel || !(mailChannel instanceof TextChannel)) return
         return mailChannel.createMessage({ content: user.mention, embed: message.embeds[0] })
       // This case will run if the reaction was the solved green check mark
@@ -416,7 +419,7 @@ export default class extends Event {
             : guildSettings.feedback.idea.channelID
           if (!channelID) return
 
-          const channel = message.member.guild.channels.get(channelID)
+          const channel = guild.channels.get(channelID)
           if (!channel || !(channel instanceof TextChannel)) return
 
           const hasApprovedPerms = Gamer.helpers.discord.checkPermissions(channel, Gamer.user.id, [
@@ -453,7 +456,7 @@ export default class extends Event {
         // Send a DM to the user telling them it was solved
         const embed = new MessageEmbed()
           .setDescription(guildSettings.feedback.solvedMessage || language(`feedback/idea:SOLVED_DEFAULT`))
-          .setAuthor(`Feedback From ${message.member.guild.name}`, message.member.guild.iconURL)
+          .setAuthor(`Feedback From ${guild.name}`, guild.iconURL)
           .setTimestamp()
 
         if (feedbackMember) {
@@ -468,7 +471,7 @@ export default class extends Event {
 
         // Send the feedback to the solved channel
         const channel = guildSettings.feedback.solvedChannelID
-          ? message.member.guild.channels.get(guildSettings.feedback.solvedChannelID)
+          ? guild.channels.get(guildSettings.feedback.solvedChannelID)
           : undefined
         // If the bot has all necessary permissions in the log channel
         if (channel && channel instanceof TextChannel) {
@@ -487,7 +490,7 @@ export default class extends Event {
         // Send a DM to the user telling them it was solved
         const rejectedEmbed = new MessageEmbed()
           .setDescription(guildSettings.feedback.rejectedMessage || language(`feedback/idea:REJECTED_DEFAULT`))
-          .setAuthor(`Feedback From ${message.member.guild.name}`, message.member.guild.iconURL)
+          .setAuthor(`Feedback From ${guild.name}`, guild.iconURL)
           .setTimestamp()
 
         if (feedbackMember) {
@@ -502,7 +505,7 @@ export default class extends Event {
 
         // Send the feedback to the solved channel
         const rejectedChannel = guildSettings.feedback.rejectedChannelID
-          ? message.member.guild.channels.get(guildSettings.feedback.rejectedChannelID)
+          ? guild.channels.get(guildSettings.feedback.rejectedChannelID)
           : undefined
         // If the bot has all necessary permissions in the log channel
         if (rejectedChannel && rejectedChannel instanceof TextChannel) {
@@ -526,5 +529,37 @@ export default class extends Event {
           return Gamer.helpers.levels.addLocalXP(feedbackMember, 3, true)
         }
     }
+  }
+
+  async handleAutoRole(message: Message, guild: Guild, userID: string) {
+    // Autorole must be the first role granted to be 100% confirmed that the user is in fact verified.
+    if (!message.member || message.member.roles.length > 1) return
+    if (Gamer.debugModeEnabled)
+      Gamer.helpers.logger.debug(
+        `AUTOROLE ON REACTION ADD: MessageID: ${message.id} UserID: ${userID} Guild Name: ${guild.name} ID: ${guild.id}`
+      )
+
+    const language = Gamer.getLanguage(message.guildID)
+    const bot = await Gamer.helpers.discord.fetchMember(message.member.guild, Gamer.user.id)
+    if (!bot || !bot.permission.has('manageRoles')) return
+
+    const role = highestRole(bot)
+    const guildSettings = await Gamer.database.models.guild.findOne({ id: guild.id })
+    if (!guildSettings?.moderation.roleIDs.autorole) return
+
+    const autorole = message.member.guild.roles.get(guildSettings.moderation.roleIDs.autorole)
+    if (!autorole || autorole.position >= role.position) return
+
+    Gamer.amplitude.push({
+      authorID: message.author.id,
+      channelID: message.channel.id,
+      guildID: guild.id,
+      messageID: message.id,
+      timestamp: message.timestamp,
+      memberID: message.member.id,
+      type: 'ROLE_ADDED'
+    })
+
+    return message.member.addRole(guildSettings.moderation.roleIDs.autorole, language(`basic/verify:AUTOROLE_ASSIGNED`))
   }
 }

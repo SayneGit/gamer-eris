@@ -3,6 +3,7 @@ import { GuildSettings } from '../types/settings'
 import GamerClient from '../structures/GamerClient'
 import { GamerMail } from '../types/gamer'
 import { MessageEmbed } from 'helperis'
+import nodefetch from 'node-fetch'
 
 const channelNameRegex = /^-+|[^\w-]|-+$/g
 
@@ -71,12 +72,10 @@ export default class {
   }
 
   async createMail(message: Message, content: string, guildSettings: GuildSettings | null, user?: User) {
-    if (!message.guildID || !message.member) return
+    if (!message.member) return
 
     const mailUser = user || message.author
-
-    const language = this.Gamer.getLanguage(message.guildID)
-
+    const language = this.Gamer.getLanguage(message.member.guild.id)
     const botMember = await this.Gamer.helpers.discord.fetchMember(message.member.guild, this.Gamer.user.id)
     if (!botMember?.permission.has('manageChannels') || !botMember.permission.has('manageRoles'))
       return message.channel.createMessage(language(`mails/mail:MISSING_PERMISSIONS`))
@@ -88,7 +87,7 @@ export default class {
 
     const [firstWord] = content.split(' ')
     const label = await this.Gamer.database.models.label.findOne({
-      guildID: message.guildID,
+      guildID: message.member.guild.id,
       name: firstWord.toLowerCase()
     })
 
@@ -103,7 +102,7 @@ export default class {
     if (!category || !(category instanceof CategoryChannel)) {
       const overwrites: Overwrite[] = [
         { id: this.Gamer.user.id, allow: Constants.Permissions.readMessages, deny: 0, type: 'member' },
-        { id: message.guildID, allow: 0, deny: Constants.Permissions.readMessages, type: 'role' }
+        { id: message.member.guild.id, allow: 0, deny: Constants.Permissions.readMessages, type: 'role' }
       ]
       const ids = guildSettings.staff.modRoleIDs
       if (guildSettings.staff.adminRoleID) ids.push(guildSettings.staff.adminRoleID)
@@ -133,18 +132,19 @@ export default class {
     this.Gamer.amplitude.push({
       authorID: mailUser.id,
       channelID: channel.id,
-      guildID: message.guildID,
+      guildID: message.member.guild.id,
       messageID: message.id,
       timestamp: message.timestamp,
       type: 'MAIL_CREATE'
     })
 
-    const topic = content.substring(0, content.length > 50 ? 50 : content.length)
+    const finalContent = content.substring(label ? content.indexOf(' ') + 1 : 0)
+    const topic = finalContent.substring(0, finalContent.length > 50 ? 50 : finalContent.length)
 
     await this.Gamer.database.models.mail.create({
       id: channel.id,
       userID: mailUser.id,
-      guildID: message.guildID,
+      guildID: message.member.guild.id,
       topic
     })
 
@@ -158,12 +158,25 @@ export default class {
         }),
         mailUser.avatarURL
       )
-      .setDescription(content)
+      .setDescription(finalContent)
       .addField(language(`mails/mail:SEND_REPLY`), language(`mails/mail:SEND_REPLY_INFO`, { prefix }), true)
       .addField(language(`mails/mail:CLOSE`), language(`mails/mail:CLOSE_INFO`, { prefix }), true)
       .setFooter(language(`mails/mail:USERID`, { id: mailUser.id }))
       .setTimestamp()
-    if (message.attachments.length) embed.setImage(message.attachments[0].url)
+
+    if (message.attachments.length) {
+      // Since this mail has an image we need to store that image cause this message will be deleted
+      const imageStorageChannel = guildSettings.moderation.logs.serverlogs.emojis.channelID
+        ? message.member.guild.channels.get(guildSettings.moderation.logs.serverlogs.emojis.channelID)
+        : undefined
+      if (imageStorageChannel && imageStorageChannel instanceof TextChannel) {
+        try {
+          const buffer = await nodefetch(message.attachments[0].url).then(res => res.buffer())
+          const result = await imageStorageChannel.createMessage('', { file: buffer, name: `mail-image` })
+          embed.setImage(result.attachments[0].proxy_url)
+        } catch {}
+      }
+    }
 
     const alertRoleIDs = guildSettings?.mails.alertRoleIDs || []
     const modifiedRoleIDs: string[] = []
@@ -177,8 +190,14 @@ export default class {
     }
 
     await channel.createMessage({
-      content: alertRoleIDs.map(roleID => `<@&${roleID}>`).join(' '),
-      embed: embed.code
+      content: alertRoleIDs
+        .filter(id => message.member?.guild.roles.has(id))
+        .map(roleID => `<@&${roleID}>`)
+        .join(' '),
+      embed: embed.code,
+      allowedMentions: {
+        roles: alertRoleIDs
+      }
     })
 
     // Disable the mentionable roles again after message is sent
@@ -217,7 +236,19 @@ export default class {
       .addField(language(`mails/mail:CLOSE`), language(`mails/mail:CLOSE_INFO`, { prefix }), true)
       .setTimestamp()
 
-    if (message.attachments.length) embed.setImage(message.attachments[0].url)
+    if (message.attachments.length) {
+      // Since this mail has an image we need to store that image cause this message will be deleted
+      const imageStorageChannel = guildSettings?.moderation.logs.serverlogs.emojis.channelID
+        ? guild.channels.get(guildSettings.moderation.logs.serverlogs.emojis.channelID)
+        : undefined
+      if (imageStorageChannel && imageStorageChannel instanceof TextChannel) {
+        try {
+          const buffer = await nodefetch(message.attachments[0].url).then(res => res.buffer())
+          const result = await imageStorageChannel.createMessage('', { file: buffer, name: `mail-image` })
+          embed.setImage(result.attachments[0].proxy_url)
+        } catch {}
+      }
+    }
 
     const channel = guild.channels.get(mail.id)
     if (!channel) return
@@ -322,8 +353,15 @@ export default class {
       .setDescription(content)
       .addField(
         language(`mails/mail:SEND_REPLY`),
-        language(`mails/mail:SEND_REPLY_INFO`, { prefix: this.Gamer.prefix })
+        language(
+          guildSettings?.mails.supportChannelID ? `mails/mail:SEND_REPLY_INFO` : `mails/mail:SEND_REPLY_INFO_SUPPORT`,
+          {
+            prefix: this.Gamer.prefix,
+            channel: `<#${guildSettings?.mails.supportChannelID}>`
+          }
+        )
       )
+      .setFooter(mail.topic)
       .setTimestamp()
     if (message.attachments.length) embed.setImage(message.attachments[0].url)
 
@@ -406,16 +444,6 @@ export default class {
 
     const channel = message.channel as GuildChannel
     channel.delete(language(`mails/mail:CHANNEL_DELETE_REASON`, { user: encodeURIComponent(message.author.username) }))
-    this.logMail(guildSettings, dmEmbed)
-
-    if (!guildSettings?.moderation.logs.modlogsChannelID) return
-
-    const modlogChannel = message.member.guild.channels.get(guildSettings.moderation.logs.modlogsChannelID)
-    if (!modlogChannel || !(modlogChannel instanceof TextChannel)) return
-
-    const botPerms = modlogChannel.permissionsOf(this.Gamer.user.id)
-    if (!botPerms.has('readMessages') || !botPerms.has('sendMessages') || !botPerms.has('embedLinks')) return
-
     const logEmbed = new MessageEmbed()
       .setDescription(content)
       .setTitle(
@@ -427,7 +455,9 @@ export default class {
       .setThumbnail(message.author.avatarURL)
       .setFooter(message.author.username)
       .setTimestamp()
-    return modlogChannel.createMessage({ embed: logEmbed.code })
+
+    this.logMail(guildSettings, dmEmbed)
+    return this.logMail(guildSettings, logEmbed)
   }
 
   logMail(guildSettings: GuildSettings | null, embed: MessageEmbed) {

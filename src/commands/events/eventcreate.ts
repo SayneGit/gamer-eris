@@ -10,7 +10,9 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
 
   if (
     !Gamer.helpers.discord.isModOrAdmin(message, guildSettings) &&
-    (!guildSettings?.roleIDs.eventsCreate || !message.member.roles.includes(guildSettings.roleIDs.eventsCreate))
+    (!guildSettings?.roleIDs.eventsCreate ||
+      (guildSettings.roleIDs.eventsCreate !== message.guildID &&
+        !message.member.roles.includes(guildSettings.roleIDs.eventsCreate)))
   )
     return
 
@@ -21,10 +23,18 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
   if (!eventID) return message.channel.createMessage(language(`events/eventcreate:CREATE_FAILED`))
   // Let the user know it succeeded
   message.channel.createMessage(language(`events/eventcreate:CREATE_SUCCESS`, { number: eventID }))
-  // Run the show command for this event so they can see the event details
-  const eventshowCommand = Gamer.commandForName(`eventshow`)
-  if (!eventshowCommand) return
-  eventshowCommand.process(message, [eventID.toString()], context)
+
+  if (!guildSettings?.vip.isVIP) {
+    // Run the show command for this event so they can see the event details
+    const eventshowCommand = Gamer.commandForName(`eventshow`)
+    if (!eventshowCommand) return
+    eventshowCommand.process(message, [eventID.toString()], context)
+  }
+
+  const prefix = Gamer.guildPrefixes.get(message.guildID) || Gamer.prefix
+  const EVENT_EDIT_EXTENDED_HELP = language(`events/eventedit:EXTENDED`, { prefix })
+
+  const regex = new RegExp(`${prefix}ee # `, 'gi')
 
   const event = await Gamer.database.models.event.findOne({
     id: eventID,
@@ -35,7 +45,9 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
   if (!guildSettings?.vip.isVIP) return Gamer.helpers.events.advertiseEvent(event)
 
   // VIP EVENT CREATE
+  const helperMessage = await Gamer.helpers.discord.embedResponse(message, EVENT_EDIT_EXTENDED_HELP.replace(regex, ``))
   Gamer.helpers.events.advertiseEvent(event, message.channel.id)
+
   return Gamer.collectors.set(message.author.id, {
     authorID: message.author.id,
     channelID: message.channel.id,
@@ -48,14 +60,45 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
       if (!msg.guildID || !msg.member) return
 
       const CANCEL_OPTIONS = language(`common:CANCEL_OPTIONS`, { returnObjects: true })
-      if (CANCEL_OPTIONS.includes(msg.content)) {
+      if ([`q`, `quit`, ...CANCEL_OPTIONS].includes(msg.content.toLowerCase())) {
         message.channel.createMessage(language(`events/eventcreate:SAVED`, { mention: msg.author.mention }))
+        helperMessage.delete().catch(() => undefined)
+        Gamer.helpers.events.advertiseEvent(event, guildSettings.eventsAdvertiseChannelID)
         return
       }
+
+      const options = [
+        `title`,
+        `description`,
+        `platform`,
+        `game`,
+        `activity`,
+        `background`,
+        `attendees`,
+        `repeat`,
+        `remove`,
+        `dm`,
+        `dms`,
+        `showattendees`,
+        `reminder`,
+        `frequency`,
+        `duration`,
+        `start`,
+        `allowedrole`,
+        `alertrole`,
+        `template`
+      ]
 
       const args = msg.content.split(' ')
       const [type, ...fullValue] = args
       const [value] = fullValue
+      collector.createdAt = Date.now()
+
+      if (!options.includes(type.toLowerCase())) {
+        message.channel.createMessage(language(`events/eventcreate:INVALID_EDIT`, { mention: msg.author.mention }))
+        return Gamer.collectors.set(message.author.id, collector)
+      }
+
       const roleID = message.roleMentions.length ? message.roleMentions[0] : value
 
       let response = `events/eventedit:TITLE_UPDATED`
@@ -87,7 +130,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
         case `background`:
           if (!guildSettings?.vip.isVIP) {
             message.channel.createMessage(language(`events/eventedit:VIP_BACKGROUND`))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
           event.backgroundURL = value
           response = `events/eventedit:BACKGROUND_UPDATED`
@@ -95,7 +138,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
         case `attendees`:
         case `5`:
           const maxAttendees = parseInt(value, 10)
-          if (!maxAttendees) return
+          if (!maxAttendees) return Gamer.collectors.set(message.author.id, collector)
           while (event.attendees.length < maxAttendees && event.waitingList.length)
             Gamer.helpers.events.transferFromWaitingList(event)
           event.maxAttendees = maxAttendees
@@ -124,7 +167,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           const reminder = Gamer.helpers.transform.stringToMilliseconds(value)
           if (!reminder) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
 
           if (event.reminders.includes(reminder)) event.reminders = event.reminders.filter(r => r === reminder)
@@ -135,7 +178,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           const frequency = Gamer.helpers.transform.stringToMilliseconds(value)
           if (!frequency) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
 
           event.frequency = frequency
@@ -146,7 +189,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           const duration = Gamer.helpers.transform.stringToMilliseconds(value)
           if (!duration) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
 
           event.duration = duration
@@ -160,7 +203,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
 
           if (!start && !startTime) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
 
           event.start = start ? Date.now() + start : startTime
@@ -174,7 +217,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
             msg.member.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
           if (!allowedRole) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
 
           if (event.allowedRoleIDs.includes(allowedRole.id))
@@ -189,7 +232,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
             msg.member.guild.roles.find(r => r.name.toLowerCase() === fullValue.join(' ').toLowerCase())
           if (!roleToAlert) {
             msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
-            return
+            return Gamer.collectors.set(message.author.id, collector)
           }
 
           if (event.alertRoleIDs.includes(roleToAlert.id))
@@ -204,8 +247,8 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
           break
         default:
           // If they used the command wrong show them the help
-          message.channel.createMessage(language(`events/eventcreate:INVALID_EDIT`, { mention: msg.author.mention }))
-          return
+          msg.channel.createMessage(language(`events/eventcreate:INVALID_TIME`, { mention: msg.author.mention }))
+          return Gamer.collectors.set(message.author.id, collector)
       }
 
       // Save any change to the events
@@ -219,7 +262,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
 
       Gamer.helpers.events.advertiseEvent(event)
       collector.createdAt = Date.now()
-      Gamer.collectors.set(message.author.id, collector)
+      return Gamer.collectors.set(message.author.id, collector)
     }
   })
 })

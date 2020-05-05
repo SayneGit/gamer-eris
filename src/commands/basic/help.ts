@@ -75,6 +75,7 @@ const categories = [
       `settenor`,
       `setverify`,
       `setwhitelisted`,
+      `setxp`,
       `viewprofanity`
     ]
   },
@@ -127,11 +128,11 @@ const categories = [
   },
   { name: `mails`, commands: [`mail`, `label`] },
   { name: `vip`, commands: [`analyze`, `analyzechannel`, `vipregister`, `roletoall`, `rolefromall`, `export`] },
-  { name: `network`, commands: [`networkcreate`, `networkfollow`] },
+  { name: `network`, commands: [`networkcreate`, `networkfollow`, `mirrorcreate`, `mirroredit`] },
   { name: `gaming`, commands: [`twitch`, `capture`] },
-  { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`] },
+  { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`, `embedset`] },
   { name: `emojis`, commands: [`emojis`, `emojicreate`, `emojidelete`] },
-  { name: `tags`, commands: [`tagcreate`, `tagdelete`, `tagshow`, `taginstall`, `taguninstall`, `tagpublic`] },
+  { name: `tags`, commands: [`tags`, `tagcreate`, `tagdelete`, `tagshow`, `taginstall`, `taguninstall`, `tagpublic`] },
   { name: `shortcuts`, commands: [`shortcutcreate`, `shortcutremove`, `shortcuts`] },
   { name: `weeb`, commands: [`manga`] }
 ]
@@ -165,6 +166,43 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   }
 
   const [commandName] = args
+
+  // if (commandName.toLowerCase() === `details`) {
+  //   const details = new MessageEmbed().setAuthor(message.author.username, message.author.avatarURL)
+  //   let description = ''
+  //   let first = true
+
+  //   for (const category of categories) {
+  //     const categoryDetail = `${first ? '' : '\n'}**» ${Gamer.helpers.transform.splitCamelCase(category.name)}**:\n`
+  //     if (first) first = false
+
+  //     if (description.length + categoryDetail.length > 2000) {
+  //       details.setDescription(description)
+  //       await message.channel.createMessage({ embed: details.code })
+  //       description = ''
+  //     }
+
+  //     description += categoryDetail
+
+  //     for (const name of category.commands) {
+  //       const detail = `\`${Gamer.helpers.transform.splitCamelCase(name)}\`: ${language(
+  //         `${category.name}/${name}:DESCRIPTION`
+  //       )}\n`
+
+  //       if (description.length + detail.length > 2000) {
+  //         details.setDescription(description)
+  //         await message.channel.createMessage({ embed: details.code })
+  //         description = ''
+  //       }
+
+  //       description += detail
+  //     }
+  //   }
+
+  //   details.setDescription(description)
+  //   return message.channel.createMessage({ embed: details.code })
+  // }
+
   if (commandName.toLowerCase() === `all`) {
     const allEmbed = new MessageEmbed().setAuthor(message.author.username, message.author.avatarURL)
     for (const category of categories) {

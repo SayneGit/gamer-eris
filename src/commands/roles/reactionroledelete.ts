@@ -1,8 +1,9 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { TextChannel, NewsChannel } from 'eris'
 
 export default new Command([`reactionroledelete`, `rrd`], async (message, args, context) => {
-  if (!message.guildID) return
+  if (!message.guildID || !message.member) return
 
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName('help')
@@ -21,13 +22,32 @@ export default new Command([`reactionroledelete`, `rrd`], async (message, args, 
   if (!name) return helpCommand.process(message, [`reactionroledelete`], context)
 
   const reactionRole = await Gamer.database.models.reactionRole.findOne({
-    name,
+    name: name.toLowerCase(),
     guildID: message.guildID
   })
 
   if (!reactionRole) return message.channel.createMessage(language(`role/reactionroleadd:NOT_FOUND`, { name }))
 
-  Gamer.database.models.reactionRole.deleteOne({ name, guildID: message.guildID }).exec()
+  Gamer.database.models.reactionRole.deleteOne({ name: name.toLowerCase(), guildID: message.guildID }).exec()
+
+  const channel = message.member.guild.channels.get(reactionRole.channelID)
+  if (
+    channel &&
+    (channel instanceof TextChannel || channel instanceof NewsChannel) &&
+    Gamer.helpers.discord.checkPermissions(channel, Gamer.user.id, [
+      `readMessages`,
+      `sendMessages`,
+      `readMessageHistory`,
+      `manageMessages`
+    ])
+  ) {
+    const reactionRoleMessage = await Gamer.getMessage(reactionRole.channelID, reactionRole.messageID).catch(
+      () => undefined
+    )
+    if (reactionRoleMessage) {
+      reactionRoleMessage.removeReactions()
+    }
+  }
 
   return message.channel.createMessage(language(`roles/reactionroledelete:DELETED`, { name }))
 })

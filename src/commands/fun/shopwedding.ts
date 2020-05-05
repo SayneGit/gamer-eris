@@ -6,7 +6,7 @@ import { TenorGif } from '../../lib/types/tenor'
 import fetch from 'node-fetch'
 
 const searchCriteria = [
-  { name: 'wedding folder', cost: 5 },
+  { name: 'wedding album', cost: 5 },
   { name: 'wedding budget', cost: 10 },
   { name: 'wedding party', cost: 10 },
   { name: 'guest list', cost: 10 },
@@ -55,9 +55,9 @@ export default new Command(`shopwedding`, async (message, _args, context) => {
     .findOne()
     .or([{ authorID: message.author.id }, { spouseID: message.author.id, accepted: true }])
 
-  if (!marriage) return message.channel.createMessage('fun/shopwedding:NOT_MARRIED')
+  if (!marriage) return message.channel.createMessage(language('fun/shopwedding:NOT_MARRIED'))
 
-  const item = searchCriteria[marriage.weddingShopCounter + 1]
+  const item = searchCriteria[marriage.weddingShopCounter]
   if (!item) return message.channel.createMessage(language(`fun/shopwedding:COMPLETE`))
   // If no settings for the user they wont have any coins to spend anyway
   const userSettings = await Gamer.database.models.user.findOne({ userID: message.author.id })
@@ -113,12 +113,12 @@ export default new Command(`shopwedding`, async (message, _args, context) => {
     returnObjects: true
   })
 
-  if (SHOPPING_LIST.length === marriage.weddingShopCounter)
+  if (SHOPPING_LIST.length === marriage.weddingShopCounter + 1)
     return message.channel.createMessage(language('fun/shopwedding:COMPLETE'))
 
   const shoppingList = SHOPPING_LIST.map(
     (i, index) =>
-      `${index <= marriage.weddingShopCounter + 1 ? `✅` : `📝`} ${index}. ${i} ${searchCriteria[index].cost} ${
+      `${index <= marriage.weddingShopCounter ? `✅` : `📝`} ${index + 1}. ${i} ${searchCriteria[index].cost} ${
         constants.emojis.coin
       }`
   )
@@ -146,7 +146,7 @@ export default new Command(`shopwedding`, async (message, _args, context) => {
       .then(res => res.json())
       .catch(() => undefined)
 
-    const randomResult = data?.results.length ? Gamer.helpers.utils.chooseRandom(data.results) : undefined
+    const randomResult = data?.results?.length ? Gamer.helpers.utils.chooseRandom(data.results) : undefined
     const [media] = randomResult ? randomResult.media : []
     if (media) embed.setImage(media.gif.url).setFooter(`Via Tenor`)
   }
@@ -157,7 +157,7 @@ export default new Command(`shopwedding`, async (message, _args, context) => {
   marriage.save()
 
   message.channel.createMessage({ embed: embed.code })
-  if (marriage.weddingShopCounter + 1 !== SHOPPING_LIST.length) return
+  if (marriage.weddingShopCounter !== SHOPPING_LIST.length) return
 
   message.channel.createMessage(language(`fun/shopwedding:CONGRATS`, { mention: message.author.mention }))
 
