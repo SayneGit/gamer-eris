@@ -3,6 +3,7 @@ import { MessageEmbed } from 'helperis'
 import { GuildSettings } from './settings'
 import { TFunction } from 'i18next'
 import { Document } from 'mongoose'
+import { GamerSurvey } from '../../database/schemas/survey'
 
 export interface Collector {
   authorID: string
@@ -16,6 +17,13 @@ export interface Collector {
 export interface FeedbackCollectorData {
   language: TFunction
   settings: GuildSettings
+  embed: MessageEmbed
+  question: string
+}
+
+export interface SurveyCollectorData {
+  language: TFunction
+  survey: GamerSurvey
   embed: MessageEmbed
   question: string
 }

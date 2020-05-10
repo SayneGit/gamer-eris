@@ -2,7 +2,8 @@ import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { TextChannel } from 'eris'
 import { MessageEmbed } from 'helperis'
-import { FeedbackCollectorData } from '../../lib/types/gamer'
+import { SurveyCollectorData } from '../../lib/types/gamer'
+import constants from '../../constants'
 
 // * <create|remove|list|run:default> (name:surveyname)
 
@@ -65,17 +66,15 @@ export default new Command(`survey`, async (message, args, context) => {
       if (!survey) return message.channel.createMessage(language(`utility/survey:NOT_FOUND`))
       const channel = message.channel.guild.channels.get(survey.channelID) as TextChannel
       if (!channel) return message.channel.createMessage(language(`utility/survey:CHANNEL_DELETED`))
-      // Check all necessary permissions in the survey channel
-      if (!channel.permissionsOf(Gamer.user.id).has('sendMessages'))
-        return message.channel.createMessage(language(`utility/survey:MISSING_SEND`))
-      if (!channel.permissionsOf(Gamer.user.id).has('embedLinks'))
-        return message.channel.createMessage(language(`utility/survey:MISSING_EMBED`))
-      if (!channel.permissionsOf(Gamer.user.id).has('addReactions'))
-        return message.channel.createMessage(language(`utility/survey:MISSING_REACT`))
-      if (!channel.permissionsOf(Gamer.user.id).has('readMessageHistory'))
-        return message.channel.createMessage(language(`utility/survey:MISSING_HISTORY`))
-      if (!channel.permissionsOf(Gamer.user.id).has('externalEmojis'))
-        return message.channel.createMessage(language(`utility/survey:MISSING_EXTERNAL`))
+      if (
+        !Gamer.helpers.discord.checkPermissions(channel, Gamer.user.id, [
+          'sendMessages',
+          'embedLinks',
+          'externalEmojis',
+          'addReactions'
+        ])
+      )
+        return message.channel.createMessage(language(`utility/survey:MISSING_PERMS`))
 
       const embed = new MessageEmbed() // TODO ADD TITLE AND SUCH
       const splitContent = input.join(' ').split(` | `)
@@ -109,15 +108,17 @@ export default new Command(`survey`, async (message, args, context) => {
             }
 
             // The user must have provided some sort of content
-            const data = collector.data as FeedbackCollectorData
-            const questions = data.settings.feedback.bugs.questions
+            const data = collector.data as SurveyCollectorData
+            const questions = data.survey.questions
 
             if (!msg.content) return
             embed.addField(data.question, msg.content)
 
             if (data.question === questions[questions.length - 1]) {
               // This was the final question so now we need to post the feedback
-              channel.createMessage({ embed: embed.code })
+              const m = await channel.createMessage({ embed: embed.code })
+              await m.addReaction(constants.emojis.greenTick).catch(() => null)
+              m.addReaction(constants.emojis.redX).catch(() => null)
               return Gamer.helpers.levels.completeMission(msg.member, `survey`, msg.guildID)
             }
 
@@ -136,7 +137,9 @@ export default new Command(`survey`, async (message, args, context) => {
           }
         })
       }
-      channel.createMessage({ embed: embed.code })
+      const m = await channel.createMessage({ embed: embed.code })
+      await m.addReaction(constants.emojis.greenTick).catch(() => null)
+      m.addReaction(constants.emojis.redX).catch(() => null)
       return Gamer.helpers.levels.completeMission(message.member, `survey`, message.guildID)
   }
 })
