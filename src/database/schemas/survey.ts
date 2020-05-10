@@ -23,3 +23,16 @@ export default new mongoose.Schema({
     }
   ]
 })
+
+export interface GamerSurvey extends mongoose.Document {
+  name: string
+  questions: string[]
+  guildID: string
+  creatorID: string
+  channelID: string
+  responses: {
+    authorID: string
+    answers: string[]
+    messageIDs: string[]
+  }[]
+}

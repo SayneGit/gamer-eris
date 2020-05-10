@@ -21,7 +21,7 @@ import RolesetSchema from './schemas/roleset'
 import RoleMessageSchema, { GamerRoleMessage } from './schemas/rolemessage'
 import ShortcutSchema, { GamerShortcut } from './schemas/shortcut'
 import SubscriptionSchema, { GamerSubscription } from './schemas/subscription'
-import SurveySchema from './schemas/survey'
+import SurveySchema, { GamerSurvey } from './schemas/survey'
 import TagSchema from './schemas/tag'
 import TradingCardSchema from './schemas/tradingCard'
 import UpvoteSchema from './schemas/upvote'
@@ -72,7 +72,7 @@ class Database {
     roleset: mongoose.model<GamerRoleset>('Roleset', RolesetSchema),
     shortcut: mongoose.model<GamerShortcut>('Shortcut', ShortcutSchema),
     subscription: mongoose.model<GamerSubscription>('Subscription', SubscriptionSchema),
-    survey: mongoose.model('Survey', SurveySchema),
+    survey: mongoose.model<GamerSurvey>('Survey', SurveySchema),
     tag: mongoose.model<GamerTag>('Tag', TagSchema),
     tradingCard: mongoose.model<GamerTradingCard>('TradingCards', TradingCardSchema),
     upvote: mongoose.model<GamerUpvote>('Upvote', UpvoteSchema),
