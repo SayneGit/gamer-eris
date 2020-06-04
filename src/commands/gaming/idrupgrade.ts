@@ -30,7 +30,7 @@ export default new Command([`idrupgrade`, `idru`], async (message, args, context
   const [type, number] = args
   // Default to friends
   const category = type?.toLowerCase() || 'friends'
-  if (!allowedItems.includes(category)) return helpCommand?.process(message, [`idrupgrade`], context)
+  if (!allowedItems.includes(category)) return helpCommand?.execute(message, [`idrupgrade`], context)
 
   const amount = Number(number) || 1
   const buyMax = number?.toLowerCase() === `max`
