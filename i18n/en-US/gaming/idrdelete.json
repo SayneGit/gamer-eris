@@ -1,0 +1,7 @@
+{
+  "DESCRIPTION": "Deletes the Idle Discord Revolution game.",
+  "EXTENDED": "Deletes your Idle Discord Revolution profile.",
+  "USAGE": "{{prefix}}idrdelete",
+  "ALIASES": "{{prefix}}idrd",
+  "DELETED": "Your Idle Discord Revolution game has been deleted."
+}
