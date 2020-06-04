@@ -5,10 +5,14 @@ export default new Command([`tags`, `tag`], async (message, _args, context) => {
   if (!message.guildID) return
 
   const Gamer = context.client as GamerClient
-  // const language = Gamer.getLanguage(message.guildID)
+  const language = Gamer.getLanguage(message.guildID)
 
   const tags = await Gamer.database.models.tag.find({ guildID: message.guildID })
-  if (!tags.length) return
+  if (!tags.length) {
+    message.channel.createMessage(language(`tags/tags:NONE`))
+    const helpCommand = Gamer.commandForName('help')
+    return helpCommand?.execute(message, ['tagcreate'], { ...context, commandName: 'help' })
+  }
 
   let response = ``
   for (const tag of tags) {

@@ -1,14 +1,12 @@
-import { Client, ClientOptions } from 'yuuko'
+import { Client } from 'yuuko'
 import i18n from '../../i18next'
 import { TFunction } from 'i18next'
 import * as glob from 'glob'
-import { PrivateChannel, Message } from 'eris'
 import { Collector, Mission, GamerTag } from '../types/gamer'
 import * as fs from 'fs'
 import { join } from 'path'
 
 import Monitor from './Monitor'
-import Event from './Event'
 
 import Database from '../../database/mongodb'
 
@@ -28,7 +26,6 @@ import UtilsHelper from '../utils/utils'
 
 import constants from '../../constants'
 import { AmplitudeEvent } from '../types/amplitude'
-import Gamer from '../..'
 import { GamerCommandPermission } from '../../database/schemas/command'
 import { GamerMirror } from '../../database/schemas/mirrors'
 
@@ -118,9 +115,6 @@ export default class GamerClient extends Client {
 
   missions: Mission[] = []
   missionsStartTimestamp = Date.now()
-
-  // All our stores to store files which we can reload easily.
-  events: Map<string, Event> = new Map()
   monitors: Map<string, Monitor> = new Map()
   // Tags are cached so no need to fetch on every message
   tags: Map<string, GamerTag> = new Map()
@@ -149,23 +143,6 @@ export default class GamerClient extends Client {
   /** Debug boolean to enable all the DEBUG logs during moments where we need to debug. */
   debugModeEnabled = false
 
-  constructor(options: ClientOptions) {
-    super(options)
-
-    this.on('messageCreate', this.runMonitors)
-  }
-
-  async runMonitors(message: Message) {
-    for (const monitor of Gamer.monitors.values()) {
-      if (monitor.ignoreBots && message.author.bot) continue
-      if (monitor.ignoreDM && message.channel instanceof PrivateChannel) continue
-      if (monitor.ignoreEdits && message.editedTimestamp) continue
-      if (monitor.ignoreOthers && message.author.id !== this.user.id) continue
-
-      monitor.execute(message, this)
-    }
-  }
-
   async connect() {
     // get i18n ready
     this.i18n = await i18n()
@@ -192,8 +169,6 @@ export default class GamerClient extends Client {
       const name = filename.substring(filename.lastIndexOf('/') + 1, filename.lastIndexOf('.'))
       // Add to the proper map based on the name of the directory
       if (dirname.endsWith('monitors/')) this.monitors.set(name, new file())
-      if (dirname.endsWith('events/')) this.events.set(name, new file(name))
-      // else if (dirname.endsWith('inhibitors/')) this.inhibitors.set(name, new file())
     }
     return this
   }

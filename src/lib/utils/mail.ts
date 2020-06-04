@@ -2,7 +2,7 @@ import { Message, Guild, CategoryChannel, Constants, Overwrite, TextChannel, Use
 import { GuildSettings } from '../types/settings'
 import GamerClient from '../structures/GamerClient'
 import { GamerMail } from '../types/gamer'
-import { MessageEmbed } from 'helperis'
+import { MessageEmbed, highestRole } from 'helperis'
 import nodefetch from 'node-fetch'
 
 const channelNameRegex = /^-+|[^\w-]|-+$/g
@@ -67,8 +67,10 @@ export default class {
 
     // User does have an open mail
     this.sendToMods(message, message.member.guild, guildSettings, content, mail)
-    const response = await message.channel.createMessage(language(`mails/mail:REPLY_SENT_TO_MODS`))
-    return setTimeout(() => response.delete().catch(() => undefined), 10000)
+    const response = await message.channel
+      .createMessage(language(`mails/mail:REPLY_SENT_TO_MODS`))
+      .catch(() => undefined)
+    return setTimeout(() => response?.delete().catch(() => undefined), 10000)
   }
 
   async createMail(message: Message, content: string, guildSettings: GuildSettings | null, user?: User) {
@@ -180,13 +182,16 @@ export default class {
 
     const alertRoleIDs = guildSettings?.mails.alertRoleIDs || []
     const modifiedRoleIDs: string[] = []
+    const botPosition = highestRole(bot).position
     for (const roleID of alertRoleIDs) {
       const role = message.member.guild.roles.get(roleID)
       // If role is already mentionable or cant find role skip
       if (!role || role.mentionable) continue
       // Make the role mentionable. Need to await so it can be mentionable when sending the message
-      await role.edit({ mentionable: true })
-      modifiedRoleIDs.push(roleID)
+      if (botPosition > role.position && bot.permission.has('manageRoles')) {
+        await role.edit({ mentionable: true })
+        modifiedRoleIDs.push(roleID)
+      }
     }
 
     await channel.createMessage({

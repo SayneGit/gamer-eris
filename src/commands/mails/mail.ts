@@ -9,8 +9,8 @@ export default new Command([`mail`, `m`], async (message, args, context) => {
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel)
     return Gamer.helpers.mail.handleDM(message, content)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
-  if (!guildSettings) return
+  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.channel.guild.id })
+  if (!guildSettings?.mails.enabled) return
 
   // If the command was ran inside the support channel handle it as needed
   if (message.channel.id === guildSettings.mails.supportChannelID)

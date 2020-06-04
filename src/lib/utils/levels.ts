@@ -1,8 +1,9 @@
-import { Member } from 'eris'
+import { Member, Message } from 'eris'
 import GamerClient from '../structures/GamerClient'
 import constants from '../../constants'
 import { milliseconds } from '../types/enums/time'
 import { highestRole } from 'helperis'
+import { addRoleToMember } from './eris'
 
 export default class {
   // Holds the guildID.memberID for those that are in cooldown per server
@@ -85,7 +86,7 @@ export default class {
       const role = member.guild.roles.get(roleID)
       // If the role is too high for the bot to manage skip
       if (!role || botsHighestRole.position <= role.position) continue
-      member.addRole(roleID, REASON)
+      addRoleToMember(member, roleID, REASON)
       this.Gamer.amplitude.push({
         authorID: member.id,
         guildID: member.guild.id,
@@ -100,7 +101,7 @@ export default class {
     if (!overrideCooldown && this.checkCooldown(member, true)) return
     const userSettings =
       (await this.Gamer.database.models.user.findOne({ userID: member.id })) ||
-      (await this.Gamer.database.models.user.create({ userID: member.id }))
+      (await this.Gamer.database.models.user.create({ userID: member.id, guildIDs: [member.guild.id] }))
 
     let multiplier = 1
     if (userSettings)
@@ -273,36 +274,41 @@ export default class {
     const allGuildSettings = await this.Gamer.database.models.guild.find({ 'xp.inactiveDaysAllowed': { $gt: 0 } })
 
     for (const guildSettings of allGuildSettings) {
-      // If the inactive days allowed has not been enabled then skip
-      if (!guildSettings.xp.inactiveDaysAllowed) continue
-
       const guild = this.Gamer.guilds.get(guildSettings.id)
       if (!guild) continue
 
       // Get all members from the database as anyone with default settings dont need to be checked
-      const allMemberSettings = await this.Gamer.database.models.member.find()
+      const allMemberSettings = await this.Gamer.database.models.member.find({ guildID: guild.id })
 
       allMemberSettings.forEach(async memberSettings => {
         // If they have never been updated skip. Or if their XP is below 100 the minimum threshold
-        if (!memberSettings.leveling.lastUpdatedAt || memberSettings.leveling.xp < 100) {
-          return
-        }
+        if (!memberSettings.leveling.lastUpdatedAt || memberSettings.leveling.xp < 100) return
 
         // Calculate how many days it has been since this user was last updated
-        const daysSinceLastUpdated = (Date.now() - memberSettings.leveling.lastUpdatedAt) / 1000 / 60 / 60 / 24
-        if (daysSinceLastUpdated < guildSettings.xp.inactiveDaysAllowed) {
-          return
-        }
+        const daysSinceLastUpdated = (Date.now() - memberSettings.leveling.lastUpdatedAt) / milliseconds.DAY
+        if (daysSinceLastUpdated < guildSettings.xp.inactiveDaysAllowed) return
 
         // Get the member object
         const member = await this.Gamer.helpers.discord.fetchMember(guild, memberSettings.memberID)
-        if (!member) {
-          return
-        }
+        if (!member) return
 
         // Remove 1% of XP from the user for being inactive today.
-        this.Gamer.helpers.levels.removeXP(member, Math.floor(memberSettings.leveling.xp * 0.01))
+        this.removeXP(
+          member,
+          Math.floor(memberSettings.leveling.xp * ((guildSettings.xp.inactivePercentage || 1) / 1000))
+        )
       })
     }
+  }
+
+  processXP(message: Message) {
+    // If a bot or in dm, no XP we want to encourage activity in servers not dms
+    if (message.author.bot || !message.member) return
+
+    const guildXP = this.Gamer.guildsXPPerMessage.get(message.member.guild.id)
+    // Update XP for the member locally
+    this.Gamer.helpers.levels.addLocalXP(message.member, guildXP || 1)
+    // Update XP for the user globally
+    this.Gamer.helpers.levels.addGlobalXP(message.member, 1)
   }
 }

@@ -11,10 +11,10 @@ export default new Command([`eventadd`, `eadd`], async (message, args, context) 
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [number, ...roleIDsOrNames] = args
-  const eventID = parseInt(number, 10)
+  const eventID = Number(number)
   const helpCommand = Gamer.commandForName(`help`)
+  if (!eventID) return helpCommand?.execute(message, [`eventadd`], { ...context, commandName: 'help' })
 
-  if (!eventID) return helpCommand?.process(message, [`eventadd`], context)
   // Get the event from this server using the id provided
   const event = await Gamer.database.models.event.findOne({
     id: eventID,
@@ -37,8 +37,12 @@ export default new Command([`eventadd`, `eadd`], async (message, args, context) 
       message.member.guild.roles.get(roleIDOrName) ||
       message.member.guild.roles.find(r => r.name.toLowerCase() === roleIDOrName.toLowerCase())
     if (!role) continue
-    const members = message.member.guild.members.filter(m => m.roles.includes(role.id))
-    for (const member of members) {
+
+    const allMemberRoles = await Gamer.database.models.roles.find({ roleIDs: role.id })
+    for (const memberRole of allMemberRoles) {
+      const member = await Gamer.helpers.discord.fetchMember(message.member.guild, memberRole.memberID)
+      if (!member) continue
+
       if (event.attendees.includes(member.id)) continue
       if (event.allowedRoleIDs.length && !member.roles.some(roleID => event.allowedRoleIDs.includes(roleID))) continue
       Gamer.helpers.events.joinEvent(event, member.id, language)

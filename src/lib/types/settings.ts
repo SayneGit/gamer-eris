@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 export interface UserSettings extends mongoose.Document {
   id: string
   userID: string
+  guildIDs: string[]
   profile: {
     backgroundID: number
     theme: string
@@ -98,6 +99,7 @@ export interface GuildSettings extends mongoose.Document {
   modules: string[]
   disableTenor: boolean
   moderation: {
+    reassignRolesOnJoin: boolean
     roleIDs: {
       autorole?: string
       public: string[]
@@ -210,6 +212,7 @@ export interface GuildSettings extends mongoose.Document {
   }
   xp: {
     inactiveDaysAllowed: number
+    inactivePercentage: number
     perMessage?: number
     perMinuteVoice?: number
     prizes: {

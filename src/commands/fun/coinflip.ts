@@ -15,7 +15,7 @@ export default new Command([`coinflip`, `cf`], async (message, args, context) =>
   if (!helpCommand) return
 
   const [choice, amountStr] = args
-  if (!choice || !amountStr) return helpCommand.process(message, [`coinflip`], context)
+  if (!choice || !amountStr) return helpCommand.execute(message, [`coinflip`], { ...context, commandName: 'help' })
 
   if (
     choice.toLowerCase() !== language(`fun/coinflip:OPTION_NUMBER0`).toLowerCase() &&
@@ -28,7 +28,7 @@ export default new Command([`coinflip`, `cf`], async (message, args, context) =>
 
   const authorSettings =
     (await Gamer.database.models.user.findOne({ userID: message.author.id })) ||
-    (await Gamer.database.models.user.create({ userID: message.author.id }))
+    (await Gamer.database.models.user.create({ userID: message.author.id, guildIDs: [message.guildID] }))
 
   // Check if author can afford
   if (amount > authorSettings.leveling.currency)

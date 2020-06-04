@@ -2,6 +2,7 @@ import { Command } from 'yuuko'
 import { PrivateChannel, Message, TextChannel, CategoryChannel, GroupChannel } from 'eris'
 import GamerClient from '../../lib/structures/GamerClient'
 import { Canvas } from 'canvas-constructor'
+import { addRoleToMember } from '../../lib/utils/eris'
 
 const createCaptcha = async (message: Message) => {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz'
@@ -91,9 +92,7 @@ export default new Command(`verify`, async (message, args, context) => {
             )
             // Run the command again for them to generate a new captcha code
             const verifyCommand = Gamer.commandForName(`verify`)
-            if (!verifyCommand) return
-            verifyCommand.process(msg, [`end`], context)
-            return
+            return verifyCommand?.execute(msg, [`end`], { ...context, commandName: 'verify' })
           }
           // Success With Captcha
 
@@ -113,7 +112,7 @@ export default new Command(`verify`, async (message, args, context) => {
           })
 
           if (!guildSettings.verify.discordVerificationStrictnessEnabled && guildSettings.moderation.roleIDs.autorole) {
-            msg.member.addRole(guildSettings.moderation.roleIDs.autorole)
+            addRoleToMember(msg.member, guildSettings.moderation.roleIDs.autorole)
             Gamer.amplitude.push({
               authorID: msg.author.id,
               channelID: msg.channel.id,
@@ -127,6 +126,7 @@ export default new Command(`verify`, async (message, args, context) => {
 
           // Delete the channel
           if (bot.permission.has('manageChannels')) msg.channel.delete()
+          return
         }
       })
     default:
@@ -205,6 +205,8 @@ export default new Command(`verify`, async (message, args, context) => {
       if (typeof embedCode.image === 'string') embedCode.image = { url: embedCode.image }
       if (typeof embedCode.thumbnail === 'string') embedCode.thumbnail = { url: embedCode.thumbnail }
       if (embedCode.color === 'RANDOM') embedCode.color = Math.floor(Math.random() * (0xffffff + 1))
+      else if (embedCode.color?.toString().startsWith('#'))
+        embedCode.color = parseInt(embedCode.color.replace('#', ''), 16)
       if (embedCode.timestamp) embedCode.timestamp = new Date().toISOString()
       // send a message to the new channel
       newChannel.createMessage({ content: message.author.mention, embed: embedCode })

@@ -1,10 +1,11 @@
-import Event from '../lib/structures/Event'
 import Gamer from '..'
+import { EventListener } from 'yuuko'
 
-export default class extends Event {
-  async execute(text: string) {
-    if (Gamer.debugModeEnabled) Gamer.helpers.logger.debug(text)
-    // console.warn('debug event', text)
-    if (text.includes('Global')) console.log(text)
-  }
-}
+export default new EventListener('debug', text => {
+  // Normal requests that arent rate limited at all
+  if (text.endsWith('(0ms left)')) return
+
+  if (Gamer.debugModeEnabled) Gamer.helpers.logger.debug(text)
+
+  if (text.includes('Global')) console.log(text)
+})

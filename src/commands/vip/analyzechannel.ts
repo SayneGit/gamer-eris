@@ -9,11 +9,11 @@ export default new Command([`analyzechannel`, `analyticschannel`], async (messag
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
   const helpCommand = Gamer.commandForName('help')
-  if (!args.length) return helpCommand?.process(message, [`analyzechannel`], context)
+  if (!args.length) return helpCommand?.execute(message, [`analyzechannel`], { ...context, commandName: 'help' })
 
   const [id, startNumber, endNumber] = args
   const channel = message.member.guild.channels.get(message.channelMentions.length ? message.channelMentions[0] : id)
-  if (!channel) return helpCommand?.process(message, [`analyzechannel`], context)
+  if (!channel) return helpCommand?.execute(message, [`analyzechannel`], { ...context, commandName: 'help' })
 
   const startDay = Number(startNumber) || 0
   const endDay = Number(endNumber) || 0
@@ -65,12 +65,14 @@ export default new Command([`analyzechannel`, `analyticschannel`], async (messag
   const NONE = language(`common:NONE`)
   const embed = new MessageEmbed()
     .setAuthor(message.member.guild.name, message.member.guild.iconURL)
+    .setTitle(language(`vip/analyzechannel:CHANNEL_STATS`, { name: channel.name }))
     .addField(language(`vip/analyze:TOTAL_MESSAGES`), totalMessages.toString(), true)
     .addField(
       language(`vip/analyze:TOP_USERS`),
       topUsers.map(id => `<@!${id}> ${userMessages.get(id)!}`).join('\n') || NONE,
       true
     )
+    .setTimestamp()
 
   return message.channel.createMessage({ content: message.author.mention, embed: embed.code })
 })

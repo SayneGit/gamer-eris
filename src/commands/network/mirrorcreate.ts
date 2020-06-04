@@ -11,7 +11,7 @@ export default new Command([`mirrorcreate`, `mc`], async (message, args, context
 
   const helpCommand = Gamer.commandForName('help')
   const [name, firstID, secondID] = args
-  if (!name || !firstID) return helpCommand?.process(message, ['mirrorcreate'], context)
+  if (!name || !firstID) return helpCommand?.execute(message, ['mirrorcreate'], { ...context, commandName: 'help' })
 
   const firstIDGuild = Gamer.guilds.get(firstID)
 
@@ -21,7 +21,11 @@ export default new Command([`mirrorcreate`, `mc`], async (message, args, context
   const mirrorChannel = firstIDGuild
     ? firstIDGuild.channels.get(secondID)
     : message.member.guild.channels.get(message.channelMentions[0] || firstID)
-  if (!mirrorChannel || (!(mirrorChannel instanceof TextChannel) && !(mirrorChannel instanceof NewsChannel)))
+  if (
+    !mirrorChannel ||
+    mirrorChannel.id === message.channel.id ||
+    (!(mirrorChannel instanceof TextChannel) && !(mirrorChannel instanceof NewsChannel))
+  )
     return message.channel.createMessage(language(`network/mirrorcreate:INVALID_CHANNEL`))
 
   // Make sure the bot has the permissions to create webhooks
@@ -46,8 +50,12 @@ export default new Command([`mirrorcreate`, `mc`], async (message, args, context
   }
 
   const webhookExists = await Gamer.database.models.mirror.findOne({ mirrorChannelID: mirrorChannel.id })
+  const validWebhook = webhookExists
+    ? await Gamer.getWebhook(webhookExists.webhookID).catch(() => undefined)
+    : undefined
+
   // All requirements passed time to create a webhook.
-  const webhook = !webhookExists
+  const webhook = !validWebhook
     ? await mirrorChannel.createWebhook(
         { name, avatar: Gamer.user.avatarURL },
         language(`network/mirrorcreate:MIRROR_CREATE_REASON`, { username: encodeURIComponent(userTag(message.author)) })

@@ -3,6 +3,11 @@ import { MessageEmbed } from 'helperis'
 import GamerClient from '../../lib/structures/GamerClient'
 import Constants from '../../constants/index'
 
+const gifs = [
+  { name: 'mirrorcreate', gif: 'https://i.imgur.com/ORLsc42.gif' },
+  { name: 'setverify', gif: 'https://i.imgur.com/TZxyAwY.gif' }
+]
+
 const categories = [
   { name: `basic`, commands: [`help`, `ping`, `invite`, `server`, `upvote`, `upvotedonate`, `user`] },
   {
@@ -75,6 +80,7 @@ const categories = [
       `settenor`,
       `setverify`,
       `setwhitelisted`,
+      `setup`,
       `setxp`,
       `viewprofanity`
     ]
@@ -129,7 +135,7 @@ const categories = [
   { name: `mails`, commands: [`mail`, `label`] },
   { name: `vip`, commands: [`analyze`, `analyzechannel`, `vipregister`, `roletoall`, `rolefromall`, `export`] },
   { name: `network`, commands: [`networkcreate`, `networkfollow`, `mirrorcreate`, `mirroredit`] },
-  { name: `gaming`, commands: [`twitch`, `capture`] },
+  { name: `gaming`, commands: [`twitch`, `capture`, `dice`] },
   { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`, `embedset`] },
   { name: `emojis`, commands: [`emojis`, `emojicreate`, `emojidelete`] },
   { name: `tags`, commands: [`tags`, `tagcreate`, `tagdelete`, `tagshow`, `taginstall`, `taguninstall`, `tagpublic`] },
@@ -221,7 +227,8 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   const name = command.names[0].toLowerCase()
   const category = categories.find(c => c.commands.includes(name)) || { name: `basic` }
 
-  const EXTENDED = language(`${category.name}/${name}:EXTENDED`, { prefix })
+  // The 1 and 2 vars are for shortcutcreate help
+  const EXTENDED = language(`${category.name}/${name}:EXTENDED`, { prefix, 1: `{{1}}`, 2: `{{2}}` })
   const USAGE = language(`${category.name}/${name}:USAGE`, { prefix })
   const ALIASES = language(`${category.name}/${name}:ALIASES`, { prefix })
   const NO_EXTENDED = language('basic/help:NO_EXTENDED')
@@ -236,6 +243,9 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
     .addField(language('basic/help:MAIN_USAGE'), USAGE, true)
     .addField(language('basic/help:MAIN_ALIASES'), ALIASES, true)
     .addField(language('basic/help:MORE'), Constants.general.gamerServerInvite)
+
+  const data = gifs.find(g => g.name === name)
+  if (data) embed.setImage(data.gif)
 
   return message.channel.createMessage({ embed: embed.code })
 })
