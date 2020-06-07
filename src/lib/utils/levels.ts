@@ -1,6 +1,9 @@
-import { Member } from 'eris'
+import { Member, Message } from 'eris'
 import GamerClient from '../structures/GamerClient'
 import constants from '../../constants'
+import { milliseconds } from '../types/enums/time'
+import { highestRole } from 'helperis'
+import { addRoleToMember } from './eris'
 
 export default class {
   // Holds the guildID.memberID for those that are in cooldown per server
@@ -71,35 +74,19 @@ export default class {
     // If it has roles to give then give them to the user
     if (!levelData || !levelData.roleIDs.length) return
 
-    const bot = member.guild.members.get(this.Gamer.user.id)
+    const bot = await this.Gamer.helpers.discord.fetchMember(member.guild, this.Gamer.user.id)
     if (!bot) return
-    // Check if the bots role is high enough to manage the role
-    const botsHighestRole = this.Gamer.helpers.discord.highestRole(bot)
 
-    const language = this.Gamer.i18n.get(this.Gamer.guildLanguages.get(member.guild.id) || `en-US`)
-    if (!language) return
+    // Check if the bots role is high enough to manage the role
+    const botsHighestRole = highestRole(bot)
+    const language = this.Gamer.getLanguage(member.guild.id)
     const REASON = language('leveling/xp:ROLE_ADD_REASON')
 
-    const rolesToAdd = []
     for (const roleID of levelData.roleIDs) {
       const role = member.guild.roles.get(roleID)
       // If the role is too high for the bot to manage skip
       if (!role || botsHighestRole.position <= role.position) continue
-      if (REASON) {
-        member.addRole(roleID, REASON)
-        this.Gamer.amplitude.push({
-          authorID: member.id,
-          guildID: member.guild.id,
-          timestamp: Date.now(),
-          memberID: member.id,
-          type: 'ROLE_ADDED'
-        })
-      } else rolesToAdd.push(roleID)
-    }
-    if (!rolesToAdd.length) return
-
-    for (const roleID of rolesToAdd) {
-      member.addRole(roleID, REASON)
+      addRoleToMember(member, roleID, REASON)
       this.Gamer.amplitude.push({
         authorID: member.id,
         guildID: member.guild.id,
@@ -114,7 +101,7 @@ export default class {
     if (!overrideCooldown && this.checkCooldown(member, true)) return
     const userSettings =
       (await this.Gamer.database.models.user.findOne({ userID: member.id })) ||
-      (await this.Gamer.database.models.user.create({ userID: member.id }))
+      (await this.Gamer.database.models.user.create({ userID: member.id, guildIDs: [member.guild.id] }))
 
     let multiplier = 1
     if (userSettings)
@@ -168,8 +155,8 @@ export default class {
 
     // Need to check if roles need to be updated now for level rewards
     const oldLevel = constants.levels.find(level => level.level === settings.leveling.level)
-    const bot = member.guild.members.get(this.Gamer.user.id)
-    if (!oldLevel || !bot || !bot.permission.has('manageRoles')) return
+    const bot = await this.Gamer.helpers.discord.fetchMember(member.guild, this.Gamer.user.id)
+    if (!oldLevel || !bot?.permission.has('manageRoles')) return
 
     // Fetch all custom guild levels data
     const levelData = await this.Gamer.database.models.level.findOne({
@@ -181,10 +168,9 @@ export default class {
     if (!levelData || !levelData.roleIDs.length) return
 
     // Check if the bots role is high enough to manage the role
-    const botsHighestRole = this.Gamer.helpers.discord.highestRole(bot)
+    const botsHighestRole = highestRole(bot)
 
-    const language = this.Gamer.i18n.get(this.Gamer.guildLanguages.get(member.guild.id) || `en-US`)
-    if (!language) return
+    const language = this.Gamer.getLanguage(member.guild.id)
 
     const REASON = language('leveling/xp:ROLE_REMOVE_REASON')
 
@@ -229,8 +215,19 @@ export default class {
   }
 
   async completeMission(member: Member, commandName: string, guildID: string) {
+    // If this guild has disabled missions turn this off.
+    const guildSettings = await this.Gamer.database.models.guild.findOne({ id: member.guild.id })
+    if (guildSettings?.xp.disableMissions) return
+
+    const upvoted = await this.Gamer.database.models.upvote.findOne({
+      userID: member.id,
+      timestamp: { $gt: Date.now() - milliseconds.HOUR * 12 }
+    })
     // Check if this is a daily mission from today
-    const mission = this.Gamer.missions.find(m => m.commandName === commandName)
+    const mission = this.Gamer.missions.find((m, index) => {
+      if (index > 2 && !upvoted) return
+      return m.commandName === commandName
+    })
     if (!mission) return
 
     // Find the data for this user regarding this mission or make it for them
@@ -270,5 +267,48 @@ export default class {
     // The mission should be completed now so need to give XP.
     this.addLocalXP(member, mission.reward, true)
     this.addGlobalXP(member, mission.reward, true)
+  }
+
+  async processInactiveXPRemoval() {
+    // Fetch all guilds from db as anything with default settings wont need to be checked
+    const allGuildSettings = await this.Gamer.database.models.guild.find({ 'xp.inactiveDaysAllowed': { $gt: 0 } })
+
+    for (const guildSettings of allGuildSettings) {
+      const guild = this.Gamer.guilds.get(guildSettings.id)
+      if (!guild) continue
+
+      // Get all members from the database as anyone with default settings dont need to be checked
+      const allMemberSettings = await this.Gamer.database.models.member.find({ guildID: guild.id })
+
+      allMemberSettings.forEach(async memberSettings => {
+        // If they have never been updated skip. Or if their XP is below 100 the minimum threshold
+        if (!memberSettings.leveling.lastUpdatedAt || memberSettings.leveling.xp < 100) return
+
+        // Calculate how many days it has been since this user was last updated
+        const daysSinceLastUpdated = (Date.now() - memberSettings.leveling.lastUpdatedAt) / milliseconds.DAY
+        if (daysSinceLastUpdated < guildSettings.xp.inactiveDaysAllowed) return
+
+        // Get the member object
+        const member = await this.Gamer.helpers.discord.fetchMember(guild, memberSettings.memberID)
+        if (!member) return
+
+        // Remove 1% of XP from the user for being inactive today.
+        this.removeXP(
+          member,
+          Math.floor(memberSettings.leveling.xp * ((guildSettings.xp.inactivePercentage || 1) / 1000))
+        )
+      })
+    }
+  }
+
+  processXP(message: Message) {
+    // If a bot or in dm, no XP we want to encourage activity in servers not dms
+    if (message.author.bot || !message.member) return
+
+    const guildXP = this.Gamer.guildsXPPerMessage.get(message.member.guild.id)
+    // Update XP for the member locally
+    this.Gamer.helpers.levels.addLocalXP(message.member, guildXP || 1)
+    // Update XP for the user globally
+    this.Gamer.helpers.levels.addGlobalXP(message.member, 1)
   }
 }

@@ -1,11 +1,11 @@
 import Monitor from '../lib/structures/Monitor'
-import { Message, PrivateChannel, GroupChannel } from 'eris'
+import { Message } from 'eris'
 import GamerClient from '../lib/structures/GamerClient'
-import GamerEmbed from '../lib/structures/GamerEmbed'
+import { MessageEmbed } from 'helperis'
 
 export default class extends Monitor {
   async execute(message: Message, Gamer: GamerClient) {
-    if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
+    if (!message.guildID || !message.member) return
 
     const authorSettings = await Gamer.database.models.user.findOne({ userID: message.author.id })
     if (authorSettings && authorSettings.afk.enabled) {
@@ -16,11 +16,14 @@ export default class extends Monitor {
     // If no @ return
     if (!message.mentions.length) return
 
-    const emojis = await Gamer.database.models.emoji.find()
+    const hasPermission = Gamer.helpers.discord.checkPermissions(message.channel, Gamer.user.id, [
+      'readMessages',
+      'sendMessages',
+      'embedLinks'
+    ])
+    if (!hasPermission) return
 
-    const language = Gamer.i18n.get(Gamer.guildLanguages.get(message.channel.guild.id) || `en-US`)
-    if (!language) return
-
+    const language = Gamer.getLanguage(message.guildID)
     const REASON = language(`settings/afk:REASON`)
 
     // Loop for each mention in the message
@@ -31,33 +34,25 @@ export default class extends Monitor {
 
       // If the message saved is not an embed send it as an embed
       if (!userSettings.afk.message.startsWith(`{`)) {
-        const embed = new GamerEmbed()
+        const embed = new MessageEmbed()
           .setAuthor(message.author.username, message.author.avatarURL)
           .setTitle(`${user.username}${user.discriminator} is AFK:`)
           .setDescription(userSettings.afk.message)
           .setFooter(`${user.username}${user.discriminator} AFK Message`)
 
-        message.channel.createMessage({ embed: embed.code }).then(msg => setTimeout(() => msg.delete(REASON), 10000))
+        const response = await message.channel.createMessage({ embed: embed.code })
+        setTimeout(() => response.delete(REASON), 10000)
         continue
       }
 
-      const embed = Gamer.helpers.transform.variables(
-        userSettings.afk.message,
-        user,
-        message.channel.guild,
-        message.author,
-        emojis
-      )
-
-      const json = JSON.parse(embed)
+      const json = JSON.parse(userSettings.afk.message)
       // Override the title and footer to prevent abuse and users getting scared the bot is posting random things
       json.title = `${user.username}${user.discriminator} is AFK:`
       json.footer.text = `${user.username}${user.discriminator} AFK Message`
 
       // Send the AFK message
-      message.channel
-        .createMessage({ embed: JSON.parse(embed) })
-        .then(msg => setTimeout(() => msg.delete(REASON), 10000))
+      const response = await message.channel.createMessage({ embed: json })
+      setTimeout(() => response.delete(REASON), 10000)
     }
   }
 }

@@ -8,11 +8,14 @@ import missions from './missions'
 import arenaofvalor from './cards/arenaofvalor'
 import mobilelegends from './cards/mobilelegends'
 import rulesofsurvival from './cards/rulesofsurvival'
+import baseball from './cards/mlb'
 import servers from './modules/servers'
+import gifs from './gifs'
 
 export default {
   emojis,
   general,
+  gifs,
   levels,
   personalities,
   profanity,
@@ -20,6 +23,7 @@ export default {
   missions,
   cards: {
     arenaofvalor,
+    baseball,
     mobilelegends,
     rulesofsurvival
   },

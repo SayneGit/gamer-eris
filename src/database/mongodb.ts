@@ -1,5 +1,7 @@
 import mongoose from 'mongoose'
-import ClientSchema from './schemas/client'
+import AnalyticSchema, { GamerAnalytic } from './schemas/analytics'
+import ClientSchema, { ClientSettings } from './schemas/client'
+import CommandSchema, { GamerCommandPermission } from './schemas/command'
 import EmojiSchema from './schemas/emoji'
 import EventSchema from './schemas/event'
 import FeedbackSchema, { GamerFeedback } from './schemas/feedback'
@@ -7,11 +9,17 @@ import GuildSchema from './schemas/guild'
 import LabelSchema from './schemas/label'
 import LevelSchema from './schemas/level'
 import MailSchema from './schemas/mail'
+import MangaSchema from './schemas/manga'
+import MarriageSchema, { GamerMarriage } from './schemas/marriage'
 import MemberSchema from './schemas/member'
+import MirrorSchema, { GamerMirror } from './schemas/mirrors'
 import MissionSchema from './schemas/mission'
 import ModlogSchema from './schemas/modlog'
+import PollSchema, { GamerPoll } from './schemas/poll'
 import ReactionRoleSchema from './schemas/reactionrole'
+import ReminderSchema, { GamerReminder } from './schemas/reminder'
 import RolesetSchema from './schemas/roleset'
+import RolesSchema, { GamerRole } from './schemas/roles'
 import RoleMessageSchema, { GamerRoleMessage } from './schemas/rolemessage'
 import ShortcutSchema, { GamerShortcut } from './schemas/shortcut'
 import SubscriptionSchema, { GamerSubscription } from './schemas/subscription'
@@ -19,6 +27,7 @@ import SurveySchema from './schemas/survey'
 import TagSchema from './schemas/tag'
 import TournamentSchema from './schemas/tournament'
 import TradingCardSchema from './schemas/tradingCard'
+import UpvoteSchema from './schemas/upvote'
 import UserSchema from './schemas/user'
 import { GuildSettings, UserSettings, MemberSettings } from '../lib/types/settings'
 
@@ -37,13 +46,17 @@ import {
   GamerMission
 } from '../lib/types/gamer'
 import { GamerTournament } from './schemas/tournament'
+import { GamerManga } from './schemas/manga'
+import { GamerUpvote } from './schemas/upvote'
 
 const connectionString = config.mongoConnectionString
 
 class Database {
   connection: mongoose.Connection
   models = {
-    client: mongoose.model('Client', ClientSchema),
+    analytics: mongoose.model<GamerAnalytic>('Analytic', AnalyticSchema),
+    client: mongoose.model<ClientSettings>('Client', ClientSchema),
+    command: mongoose.model<GamerCommandPermission>('Command', CommandSchema),
     emoji: mongoose.model<GamerEmoji>('Emoji', EmojiSchema),
     event: mongoose.model<GamerEvent>('Event', EventSchema),
     feedback: mongoose.model<GamerFeedback>('Feedback', FeedbackSchema),
@@ -51,11 +64,17 @@ class Database {
     label: mongoose.model<GamerMailLabel>('Label', LabelSchema),
     level: mongoose.model<GamerLevel>('Level', LevelSchema),
     mail: mongoose.model<GamerMail>('Mail', MailSchema),
+    manga: mongoose.model<GamerManga>('Manga', MangaSchema),
+    marriage: mongoose.model<GamerMarriage>('Marriage', MarriageSchema),
     member: mongoose.model<MemberSettings>('Member', MemberSchema),
+    mirror: mongoose.model<GamerMirror>('Mirror', MirrorSchema),
     mission: mongoose.model<GamerMission>('Mission', MissionSchema),
     modlog: mongoose.model<GamerModlog>('Modlog', ModlogSchema),
+    poll: mongoose.model<GamerPoll>('Poll', PollSchema),
     reactionRole: mongoose.model<GamerReactionRole>('ReactionRole', ReactionRoleSchema),
+    reminder: mongoose.model<GamerReminder>('Reminder', ReminderSchema),
     roleMessages: mongoose.model<GamerRoleMessage>('RoleMessage', RoleMessageSchema),
+    roles: mongoose.model<GamerRole>('Roles', RolesSchema),
     roleset: mongoose.model<GamerRoleset>('Roleset', RolesetSchema),
     shortcut: mongoose.model<GamerShortcut>('Shortcut', ShortcutSchema),
     subscription: mongoose.model<GamerSubscription>('Subscription', SubscriptionSchema),
@@ -63,6 +82,7 @@ class Database {
     tag: mongoose.model<GamerTag>('Tag', TagSchema),
     tournament: mongoose.model<GamerTournament>('Tournament', TournamentSchema),
     tradingCard: mongoose.model<GamerTradingCard>('TradingCards', TradingCardSchema),
+    upvote: mongoose.model<GamerUpvote>('Upvote', UpvoteSchema),
     user: mongoose.model<UserSettings>('User', UserSchema)
   }
 

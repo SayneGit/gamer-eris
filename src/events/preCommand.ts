@@ -1,33 +1,41 @@
-// Logs that a command run (even if it was inhibited)
-import { Message, PrivateChannel, GroupChannel } from 'eris'
-import Event from '../lib/structures/Event'
-import { Command, CommandContext } from 'yuuko'
-import GamerClient from '../lib/structures/GamerClient'
+// // Logs that a command run (even if it was inhibited)
+import { EventListener } from 'yuuko'
+import { TextChannel, NewsChannel } from 'eris'
+import { userTag } from 'helperis'
+import Gamer from '..'
 
-export default class extends Event {
-  async execute(command: Command, message: Message, _args: string[], context: CommandContext) {
-    const Gamer = context.client as GamerClient
+export default new EventListener('preCommand', (command, message, _args, context) => {
+  const [name] = command.names
 
-    const [name] = command.names
+  const channelName =
+    message.channel instanceof TextChannel || message.channel instanceof NewsChannel ? message.channel.name : 'UNKNWON'
+  const tag = userTag(message.author)
 
-    if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel || !message.member) return
+  Gamer.helpers.logger.debug(
+    `[${context.commandName}] Command Ran in ${message.member?.guild.name || 'DM'} by ${tag} ID: ${
+      message.author.id
+    } in channel ${channelName} ID: ${message.channel.id}`,
+    'blue'
+  )
 
-    Gamer.helpers.logger.blue(`[${context.commandName}] Command ran in ${message.channel.guild.name}`)
+  if (!Gamer.debugModeEnabled)
+    Gamer.helpers.logger.blue(`[${context.commandName}] Command ran in ${message.member?.guild.name || 'DM'}`)
 
-    Gamer.amplitude.push({
-      authorID: message.author.id,
-      channelID: message.channel.id,
-      guildID: message.channel.guild.id,
-      messageID: message.id,
-      timestamp: message.timestamp,
-      commandName: name,
-      type: 'COMMAND_RAN'
-    })
+  if (!message.guildID || !message.member) return
 
-    // Return a random number between 2 and 10 points for special commands
-    const xpForCommand = [`profile`, `background`].includes(name) ? Math.floor(Math.random() * (10 - 2 + 1) + 2) : 1
+  Gamer.amplitude.push({
+    authorID: message.author.id,
+    channelID: message.channel.id,
+    guildID: message.guildID,
+    messageID: message.id,
+    timestamp: message.timestamp,
+    commandName: name,
+    type: 'COMMAND_RAN'
+  })
 
-    Gamer.helpers.levels.addLocalXP(message.member, xpForCommand)
-    Gamer.helpers.levels.addGlobalXP(message.member, xpForCommand)
-  }
-}
+  // Return a random number between 2 and 10 points for special commands
+  const xpForCommand = [`profile`, `background`].includes(name) ? Math.floor(Math.random() * (10 - 2 + 1) + 2) : 1
+
+  Gamer.helpers.levels.addLocalXP(message.member, xpForCommand)
+  Gamer.helpers.levels.addGlobalXP(message.member, xpForCommand)
+})

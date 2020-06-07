@@ -1,13 +1,18 @@
-import { Message, AnyGuildChannel, Member, Role } from 'eris'
+import { Message, Member, PrivateChannel, Guild, GuildChannel } from 'eris'
 import config from '../../../config'
 import constants from '../../constants'
-import GamerEmbed from '../structures/GamerEmbed'
+import { MessageEmbed } from 'helperis'
+import GamerClient from '../structures/GamerClient'
+import { GuildSettings } from '../types/settings'
+import { highestRole } from 'helperis'
+import Gamer from '../..'
+import { milliseconds } from '../types/enums/time'
 
 const emojiRegex = /<?(?:(a):)?(\w{2,32}):(\d{17,19})?>?/
 
 export default class {
   embedResponse(message: Message, text: string) {
-    const embed = new GamerEmbed()
+    const embed = new MessageEmbed()
       .setAuthor(
         `${message.member?.nick || message.author.username}#${message.author.discriminator}`,
         message.author.avatarURL
@@ -25,15 +30,15 @@ export default class {
     return botOwners.includes(message.author.id) || botMods.includes(message.author.id)
   }
 
-  isModerator(message: Message, roleIDs: string[] = []) {
-    return roleIDs.some(id => message.member && message.member.roles.includes(id))
-  }
-
   // If the roleid is undefined its to also check the admin perm
   isAdmin(message: Message, roleID?: string) {
+    return message.member?.permission.has('administrator') || (roleID && message.member?.roles.includes(roleID))
+  }
+
+  isModOrAdmin(message: Message, settings: GuildSettings | null) {
     return (
-      message.member &&
-      (message.member.permission.has('administrator') || (roleID && message.member.roles.includes(roleID)))
+      this.isAdmin(message, settings?.staff.adminRoleID) ||
+      Boolean(settings?.staff.modRoleIDs.some(id => message.member?.roles.includes(id)))
     )
   }
 
@@ -70,8 +75,11 @@ export default class {
     }
   }
 
-  checkPermissions(channel: AnyGuildChannel, userID: string, permissions: string[]) {
-    return !permissions.some(permission => !channel.permissionsOf(userID).has(permission))
+  checkPermissions(channel: GuildChannel | PrivateChannel, userID: string, permissions: string[]) {
+    if (channel instanceof PrivateChannel) return true
+
+    const perms = channel.permissionsOf(userID)
+    return permissions.every(permission => perms.has(permission))
   }
 
   idsToUserTag(ids: string[]) {
@@ -79,40 +87,51 @@ export default class {
   }
 
   compareMemberPosition(member: Member, target: Member) {
-    let memberHighestRole: Role | undefined
-    let targetHighestRole: Role | undefined
-
-    for (const roleID of member.roles) {
-      const role = member.guild.roles.get(roleID)
-      if (!role) continue
-      if (!memberHighestRole || memberHighestRole.position < role.position) memberHighestRole = role
-    }
-
-    for (const roleID of target.roles) {
-      const role = target.guild.roles.get(roleID)
-      if (!role) continue
-      if (!targetHighestRole || targetHighestRole.position < role.position) targetHighestRole = role
-    }
-    // If the member has no role they can't be higher than anyone
-    if (!memberHighestRole) return false
-    // If the member has a role but the target doesn't they do have perms to manage
-    if (!targetHighestRole) return true
+    const memberHighestRole = highestRole(member)
+    const targetHighestRole = highestRole(target)
     return memberHighestRole.position > targetHighestRole.position
-  }
-
-  highestRole(member: Member) {
-    let memberHighestRole = member.guild.roles.get(member.guild.id) as Role
-
-    for (const roleID of member.roles) {
-      const role = member.guild.roles.get(roleID)
-      if (!role) continue
-      if (!memberHighestRole || memberHighestRole.position < role.position) memberHighestRole = role
-    }
-
-    return memberHighestRole
   }
 
   booleanEmoji(enabled: boolean) {
     return enabled ? constants.emojis.greenTick : constants.emojis.redX
+  }
+
+  async fetchMember(guild: Guild, id: string) {
+    // Dumb ts shit on array destructuring
+    if (!id) return
+
+    const userID = id.startsWith('<@') ? id.substring(id.startsWith('<@!') ? 3 : 2, id.length - 1) : id
+    const cachedMember = guild.members.get(userID)
+    if (cachedMember) return cachedMember
+
+    const member = await guild.shard.client.getRESTGuildMember(guild.id, userID).catch(() => undefined)
+    return member
+  }
+
+  async fetchUser(Gamer: GamerClient, id: string) {
+    // dumb ts shit
+    if (!id) return
+
+    const userID = id.startsWith('<@') ? id.substring(id.startsWith('<@!') ? 3 : 2, id.length - 1) : id
+
+    const cachedUser = Gamer.users.get(userID)
+    if (cachedUser) return cachedUser
+
+    const user = await Gamer.getRESTUser(userID).catch(() => undefined)
+    if (user) Gamer.users.add(user)
+
+    return user
+  }
+
+  /** Clean out message collectors after they expire. D */
+  async processMessageCollectors() {
+    const allGuildSettings = await Gamer.database.models.guild.find({ 'vip.isVIP': true })
+    Gamer.collectors.forEach(collector => {
+      const guildSettings = allGuildSettings.find(g => g.id === collector.guildID)
+      const menutime = guildSettings ? (guildSettings.menutime > 5 ? guildSettings.menutime : 5) : 2
+      if (Date.now() - collector.createdAt < milliseconds.MINUTE * menutime) return
+
+      Gamer.collectors.delete(collector.authorID)
+    })
   }
 }

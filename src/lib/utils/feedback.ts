@@ -1,8 +1,16 @@
 import { Message, TextChannel } from 'eris'
 import constants from '../../constants'
-import GamerEmbed from '../structures/GamerEmbed'
+import { MessageEmbed } from 'helperis'
 import { GuildSettings } from '../types/settings'
 import GamerClient from '../structures/GamerClient'
+
+const feedbackEmojis = [
+  constants.emojis.voteup,
+  constants.emojis.votedown,
+  constants.emojis.mailbox,
+  constants.emojis.greenTick,
+  constants.emojis.redX
+]
 
 export default class {
   Gamer: GamerClient
@@ -11,9 +19,8 @@ export default class {
     this.Gamer = client
   }
 
-  async sendBugReport(message: Message, channel: TextChannel, embed: GamerEmbed, settings: GuildSettings) {
-    const language = this.Gamer.i18n.get(this.Gamer.guildLanguages.get(channel.guild.id) || `en-US`)
-    if (!language) return
+  async sendBugReport(message: Message, channel: TextChannel, embed: MessageEmbed, settings: GuildSettings) {
+    const language = this.Gamer.getLanguage(channel.guild.id)
 
     const channelToUse =
       settings.feedback.approvalChannelID && channel.guild.channels.has(settings.feedback.approvalChannelID)
@@ -23,21 +30,12 @@ export default class {
     if (!channelToUse || !(channelToUse instanceof TextChannel)) return
 
     const needsApproval = channel.id === channelToUse.id
-    const feedback = await channelToUse.createMessage({ embed: embed.code })
+    const feedback = await channelToUse.createMessage({ embed: embed.code }, embed.file)
     if (!feedback) return
 
     // Create all reactions and then react to the message sent in the feedback channel
     // Permissions are checked in the bug command so we should be good to react
-    const emojis = needsApproval
-      ? [
-          settings.feedback.bugs.emojis.up,
-          settings.feedback.bugs.emojis.down,
-          constants.emojis.questionMark,
-          constants.emojis.mailbox,
-          constants.emojis.greenTick,
-          constants.emojis.redX
-        ]
-      : [constants.emojis.greenTick, constants.emojis.redX]
+    const emojis = needsApproval ? feedbackEmojis : [constants.emojis.greenTick, constants.emojis.redX]
 
     const reactions = emojis.map((emoji: string) => this.Gamer.helpers.discord.convertEmoji(emoji, `reaction`))
     for (const reaction of reactions) if (reaction) await feedback.addReaction(reaction)
@@ -67,9 +65,8 @@ export default class {
     )
   }
 
-  async sendIdea(message: Message, channel: TextChannel, embed: GamerEmbed, settings: GuildSettings) {
-    const language = this.Gamer.i18n.get(this.Gamer.guildLanguages.get(channel.guild.id) || `en-US`)
-    if (!language) return
+  async sendIdea(message: Message, channel: TextChannel, embed: MessageEmbed, settings: GuildSettings) {
+    const language = this.Gamer.getLanguage(channel.guild.id)
 
     const channelToUse =
       settings.feedback.approvalChannelID && channel.guild.channels.has(settings.feedback.approvalChannelID)
@@ -80,21 +77,12 @@ export default class {
 
     const needsApproval = channel.id === channelToUse.id
 
-    const feedback = await channelToUse.createMessage({ embed: embed.code })
+    const feedback = await channelToUse.createMessage({ embed: embed.code }, embed.file)
     if (!feedback) return
 
     // Create all reactions and then react to the message sent in the feedback channel
     // Permissions are checked in the bug command so we should be good to react
-    const emojis = needsApproval
-      ? [
-          settings.feedback.bugs.emojis.up,
-          settings.feedback.bugs.emojis.down,
-          constants.emojis.questionMark,
-          constants.emojis.mailbox,
-          constants.emojis.greenTick,
-          constants.emojis.redX
-        ]
-      : [constants.emojis.greenTick, constants.emojis.redX]
+    const emojis = needsApproval ? feedbackEmojis : [constants.emojis.greenTick, constants.emojis.redX]
 
     const reactions = emojis.map((emoji: string) => this.Gamer.helpers.discord.convertEmoji(emoji, `reaction`))
     for (const reaction of reactions) if (reaction) await feedback.addReaction(reaction)
@@ -125,7 +113,7 @@ export default class {
     )
   }
 
-  async logFeedback(embed: GamerEmbed, channelID: string) {
+  async logFeedback(embed: MessageEmbed, channelID: string) {
     // Check if this log channel is valid
     const logChannel = this.Gamer.getChannel(channelID)
     if (!logChannel || !(logChannel instanceof TextChannel)) return
@@ -139,6 +127,6 @@ export default class {
       ])
     )
       return
-    return logChannel.createMessage({ embed: embed.code })
+    return logChannel.createMessage({ embed: embed.code }, embed.file)
   }
 }

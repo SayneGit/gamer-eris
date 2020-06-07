@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 export interface UserSettings extends mongoose.Document {
   id: string
   userID: string
+  guildIDs: string[]
   profile: {
     backgroundID: number
     theme: string
@@ -80,6 +81,7 @@ export interface GuildSettings extends mongoose.Document {
     categoryID: string | undefined
     enabled: boolean
     supportChannelID: string | undefined
+    logChannelID: string
   }
   staff: {
     adminRoleID: string | undefined
@@ -95,7 +97,9 @@ export interface GuildSettings extends mongoose.Document {
     disabledChannels: string[]
   }
   modules: string[]
+  disableTenor: boolean
   moderation: {
+    reassignRolesOnJoin: boolean
     roleIDs: {
       autorole?: string
       public: string[]
@@ -208,12 +212,15 @@ export interface GuildSettings extends mongoose.Document {
   }
   xp: {
     inactiveDaysAllowed: number
-    daily: number
+    inactivePercentage: number
+    perMessage?: number
+    perMinuteVoice?: number
     prizes: {
       first: string
       second: string
       third: string
     }
+    disableMissions?: boolean
   }
   network: {
     channelIDs: {

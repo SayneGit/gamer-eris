@@ -41,7 +41,9 @@ export default new mongoose.Schema({
     // Whether the mail system is enabled or disabled
     enabled: Boolean,
     // Support channel can automatically create mails without needing to use commands. Better user experience.
-    supportChannelID: String
+    supportChannelID: String,
+    // The log channel where all mails will be sent.
+    logChannelID: String
   },
   staff: {
     // Dangerous permissions so we only should allow max of 1 role
@@ -65,7 +67,9 @@ export default new mongoose.Schema({
   },
   // The modules that have been enabled in this guild.
   modules: { type: [String], lowercase: true },
+  disableTenor: Boolean,
   moderation: {
+    reassignRolesOnJoin: Boolean,
     roleIDs: {
       // The role to be automatically assigned once the user finished verifying.
       autorole: String,
@@ -222,8 +226,12 @@ export default new mongoose.Schema({
   xp: {
     // The max amount of days u can be inactive on a server before losing XP
     inactiveDaysAllowed: { type: Number, default: 0 },
-    // The amount of xp u gain by typing daily in this server.
-    daily: { type: Number, default: 10 },
+    // The percentage of xp to be removed when user is marked inactive
+    inactivePercentage: { type: Number, default: 1 },
+    // The amount of xp to grant per message
+    perMessage: Number,
+    // The amount of xp to grant per minute in voice
+    perMinuteVoice: Number,
     prizes: {
       // url image for the first place prize
       first: String,
@@ -231,7 +239,8 @@ export default new mongoose.Schema({
       second: String,
       // url image for the third place prize
       third: String
-    }
+    },
+    disableMissions: Boolean
   },
   network: {
     channelIDs: {

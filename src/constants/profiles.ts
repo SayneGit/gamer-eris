@@ -9,7 +9,7 @@ export default {
     logo: join(assetsFolder, `profile/gamer.png`),
     text: `The Bot For Every Gamer`,
     url: `https://gamer.netlify.com`,
-    name: `Gamer`
+    name: `Coins`
   },
   whiteMode: {
     username: `#000`,
@@ -18,7 +18,7 @@ export default {
     xpbarText: `#000`,
     xpbarRatioUp: `#000`,
     xpbarRatioDown: `#000`,
-    badgeShadow: `rgba(100,100,100,.7)`,
+    badgeShadow: `rgba(161,161,161,1)`,
     badgeFilling: `#e0e0e0`,
     xpbarFilling: `#e0e0e0`,
     clanRectFilling: `rgba(54,54,54,.7)`,
@@ -78,6 +78,21 @@ export default {
       name: `Free Fire 3`,
       buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/freefire3.png`)),
       vipNeeded: false
+    },
+    {
+      id: 7,
+      name: `ATS - Submitted By BeardCaliper#1897`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/ats.jpg`))
+    },
+    {
+      id: 8,
+      name: `Dicey Cafe - Submitted By Derk#0127`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/diceycafe.png`))
+    },
+    {
+      id: 9,
+      name: `Control`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/control.jpg`))
     }
   ],
   backgroundPackages: [],

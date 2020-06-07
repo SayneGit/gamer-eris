@@ -1,14 +1,12 @@
-import { Client, ClientOptions } from 'yuuko'
+import { Client } from 'yuuko'
 import i18n from '../../i18next'
 import { TFunction } from 'i18next'
 import * as glob from 'glob'
-import { PrivateChannel, Message, GroupChannel } from 'eris'
 import { Collector, Mission, GamerTag } from '../types/gamer'
 import * as fs from 'fs'
 import { join } from 'path'
 
 import Monitor from './Monitor'
-import Event from './Event'
 
 import Database from '../../database/mongodb'
 
@@ -24,11 +22,13 @@ import ModerationHelper from '../utils/moderation'
 import ScriptsHelper from '../utils/scripts'
 import TournamentHelper from '../utils/tournaments'
 import TransformHelper from '../utils/transform'
+import TenorHelper from '../utils/tenor'
 import UtilsHelper from '../utils/utils'
 
 import constants from '../../constants'
 import { AmplitudeEvent } from '../types/amplitude'
-import Gamer from '../..'
+import { GamerCommandPermission } from '../../database/schemas/command'
+import { GamerMirror } from '../../database/schemas/mirrors'
 
 const rootFolder = join(__dirname, `..`, `..`, `..`, `..`)
 const assetsFolder = join(rootFolder, `assets`)
@@ -110,6 +110,7 @@ export default class GamerClient extends Client {
     scripts: new ScriptsHelper(this),
     transform: new TransformHelper(this),
     tournaments: new TournamentHelper(this),
+    tenor: new TenorHelper(this),
     utils: new UtilsHelper(this)
   }
 
@@ -118,9 +119,6 @@ export default class GamerClient extends Client {
 
   missions: Mission[] = []
   missionsStartTimestamp = Date.now()
-
-  // All our stores to store files which we can reload easily.
-  events: Map<string, Event> = new Map()
   monitors: Map<string, Monitor> = new Map()
   // Tags are cached so no need to fetch on every message
   tags: Map<string, GamerTag> = new Map()
@@ -134,24 +132,20 @@ export default class GamerClient extends Client {
   guildLanguages: Map<string, string> = new Map()
   // The guild support channel ids. This is needed on every single message sent so we cache it
   guildSupportChannelIDs: Map<string, string> = new Map()
-
-  constructor(options: ClientOptions) {
-    super(options)
-
-    this.on('messageCreate', this.runMonitors)
-  }
-
-  async runMonitors(message: Message) {
-    if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel) return
-    for (const monitor of Gamer.monitors.values()) {
-      if (monitor.ignoreBots && message.author.bot) continue
-      if (monitor.ignoreDM && message.channel instanceof PrivateChannel) continue
-      if (monitor.ignoreEdits && message.editedTimestamp) continue
-      if (monitor.ignoreOthers && message.author.id !== this.user.id) continue
-
-      monitor.execute(message, this)
-    }
-  }
+  /** This stores the guilds that have disabled Tenor Gifs */
+  guildsDisableTenor: Map<string, boolean> = new Map()
+  /** This stores the custom command permissions for guilds */
+  guildCommandPermissions = new Map<string, GamerCommandPermission>()
+  /** This stores the guild ids that have had their members fully fetched. */
+  allMembersFetchedGuildIDs = new Set<string>()
+  /** The amount of xp per message setting cached as its needed on all messages */
+  guildsXPPerMessage = new Map<string, number>()
+  /** The amount of xp per minute in voice setting */
+  guildsXPPerMinuteVoice = new Map<string, number>()
+  vipGuildIDs = new Set<string>()
+  mirrors = new Map<string, GamerMirror>()
+  /** Debug boolean to enable all the DEBUG logs during moments where we need to debug. */
+  debugModeEnabled = false
 
   async connect() {
     // get i18n ready
@@ -179,8 +173,6 @@ export default class GamerClient extends Client {
       const name = filename.substring(filename.lastIndexOf('/') + 1, filename.lastIndexOf('.'))
       // Add to the proper map based on the name of the directory
       if (dirname.endsWith('monitors/')) this.monitors.set(name, new file())
-      if (dirname.endsWith('events/')) this.events.set(name, new file(name))
-      // else if (dirname.endsWith('inhibitors/')) this.inhibitors.set(name, new file())
     }
     return this
   }
@@ -189,8 +181,15 @@ export default class GamerClient extends Client {
     // Delete all current items in the map
     map.clear()
     // Reload everything from that directory
-    this.addDirectory(dirname)
+    this.addDirectory(join(__dirname, `../../${dirname}`))
 
     return this
+  }
+
+  getLanguage(guildID?: string) {
+    const guildLanguage = guildID ? this.guildLanguages.get(guildID) : undefined
+    const language = guildLanguage ? this.i18n.get(guildLanguage) : undefined
+    const english = this.i18n.get('en-US') as TFunction
+    return language || english
   }
 }
