@@ -4,6 +4,7 @@ import GamerClient from '../structures/GamerClient'
 import { GamerMail } from '../types/gamer'
 import { MessageEmbed, highestRole } from 'helperis'
 import nodefetch from 'node-fetch'
+import { deleteMessage } from './eris'
 
 const channelNameRegex = /^-+|[^\w-]|-+$/g
 
@@ -47,7 +48,7 @@ export default class {
     const guild = this.Gamer.guilds.get(mail.guildID)
     if (!guild) return
 
-    const guildSettings = await this.Gamer.database.models.guild.findOne({ id: guild.id })
+    const guildSettings = await this.Gamer.database.models.guild.findOne({ guildID: guild.id })
 
     this.sendToMods(message, guild, guildSettings, content, mail)
     return message.channel.createMessage(language(`mails/mail:REPLY_SENT_TO_MODS`))
@@ -144,7 +145,7 @@ export default class {
     const topic = finalContent.substring(0, finalContent.length > 50 ? 50 : finalContent.length)
 
     await this.Gamer.database.models.mail.create({
-      id: channel.id,
+      channelID: channel.id,
       userID: mailUser.id,
       guildID: message.member.guild.id,
       topic
@@ -212,12 +213,12 @@ export default class {
       role.edit({ mentionable: false })
     }
 
-    if (!user) message.delete().catch(() => undefined)
+    if (!user) deleteMessage(message)
 
     this.logMail(guildSettings, embed)
 
     const response = await message.channel.createMessage(language(`mails/mail:CREATED`))
-    return setTimeout(() => response.delete().catch(() => undefined), 10000)
+    return deleteMessage(response, 10)
   }
 
   async sendToMods(
@@ -255,7 +256,7 @@ export default class {
       }
     }
 
-    const channel = guild.channels.get(mail.id)
+    const channel = guild.channels.get(mail.channelID)
     if (!channel) return
     const botPerms = channel.permissionsOf(this.Gamer.user.id)
     if (!botPerms.has('readMessages') || !botPerms.has('sendMessages') || !botPerms.has('embedLinks')) return
@@ -275,7 +276,7 @@ export default class {
     }
 
     // Await so the message sends before we make roles unmentionable again
-    await this.Gamer.createMessage(mail.id, {
+    await this.Gamer.createMessage(mail.channelID, {
       content: alertRoleIDs
         .filter(id => guild.roles.has(id))
         .map(roleID => `<@&${roleID}>`)

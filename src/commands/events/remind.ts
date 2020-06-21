@@ -21,7 +21,7 @@ export default new Command(
         reminders
           .map(
             reminder =>
-              `**${reminder.id}: ${Gamer.helpers.transform.humanizeMilliseconds(
+              `**${reminder.reminderID}: ${Gamer.helpers.transform.humanizeMilliseconds(
                 reminder.timestamp - Date.now()
               )}** => ${reminder.content}`
           )
@@ -48,7 +48,7 @@ export default new Command(
     message.channel.createMessage(language('events/remind:CREATED', { mention: message.author.mention }))
 
     return Gamer.database.models.reminder.create({
-      id: message.id,
+      reminderID: message.id,
       guildID: message.guildID,
       channelID: message.channel.id,
       userID: message.author.id,

@@ -1,5 +1,6 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command([`settag`, `settags`], async (message, args, context) => {
   if (!message.guildID) return
@@ -7,9 +8,7 @@ export default new Command([`settag`, `settags`], async (message, args, context)
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName('help')
 
-  const guildSettings =
-    (await Gamer.database.models.guild.findOne({ id: message.guildID })) ||
-    (await Gamer.database.models.guild.create({ id: message.guildID }))
+  const guildSettings = await upsertGuild(message.guildID)
 
   const language = Gamer.getLanguage(message.guildID)
 
@@ -33,7 +32,8 @@ export default new Command([`settag`, `settags`], async (message, args, context)
       tagToEdit.save()
       return message.channel.createMessage(language(`settings/settags:TOGGLED_MAIL`, { name }))
     case `channel`:
-      if (!message.channelMentions.length) return helpCommand?.execute(message, [`settags`], { ...context, commandName: 'help' })
+      if (!message.channelMentions.length)
+        return helpCommand?.execute(message, [`settags`], { ...context, commandName: 'help' })
 
       for (const channelID of message.channelMentions) {
         if (guildSettings.tags.disabledChannels.includes(channelID))

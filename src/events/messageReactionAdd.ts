@@ -6,7 +6,13 @@ import { MessageEmbed } from 'helperis'
 import nodefetch from 'node-fetch'
 import { highestRole } from 'helperis'
 import { EventListener } from 'yuuko'
-import { addRoleToMember } from '../lib/utils/eris'
+import {
+  addRoleToMember,
+  fetchAllReactors,
+  deleteMessage,
+  removeReaction,
+  removeRoleFromMember
+} from '../lib/utils/eris'
 
 const eventEmojis: string[] = []
 const networkReactions = [constants.emojis.heart, constants.emojis.repeat, constants.emojis.plus]
@@ -56,8 +62,8 @@ async function handleEventReaction(message: Message, emoji: ReactionEmoji, userI
 
   switch (emoji.id) {
     case joinEmojiID:
-      const denyReactors = await message.getReaction(denyReaction).catch(() => [])
-      if (denyReactors.find(user => user.id === userID)) message.removeReaction(denyReaction, userID)
+      removeReaction(message, denyReaction, userID)
+      message.removeReaction(denyReaction, userID)
       if (event.attendees.includes(userID)) return
       if (event.allowedRoleIDs.length && !event.allowedRoleIDs.some(id => member.roles.includes(id))) return
 
@@ -66,8 +72,7 @@ async function handleEventReaction(message: Message, emoji: ReactionEmoji, userI
       message.channel.createMessage(response).then(msg => setTimeout(() => msg.delete().catch(() => undefined), 10000))
       break
     case denyEmojiID:
-      const joinReactors = await message.getReaction(joinReaction).catch(() => [])
-      if (joinReactors.find(user => user.id === userID)) message.removeReaction(joinReaction, userID)
+      message.removeReaction(joinReaction, userID)
       if (event.denials.includes(userID)) return
 
       Gamer.helpers.events.denyEvent(event, userID)
@@ -99,7 +104,7 @@ async function handleReactionRole(message: Message, emoji: ReactionEmoji, userID
     const role = guild.roles.get(roleID)
     if (!role || role.position > botsHighestRole.position) continue
 
-    if (member.roles.includes(roleID)) member.removeRole(roleID, `Removed role for clicking reaction role.`)
+    if (member.roles.includes(roleID)) removeRoleFromMember(member, roleID, `Removed role for clicking reaction role.`)
     else addRoleToMember(member, roleID, `Added roles for clicking a reaction role message.`)
   }
 }
@@ -156,9 +161,7 @@ async function handleNetworkReaction(message: Message, emoji: ReactionEmoji, use
     const language = Gamer.getLanguage(originalServer.id)
 
     // Get the guild settings for that server id
-    const guildSettings = await Gamer.database.models.guild.findOne({
-      id: originalServer.id
-    })
+    const guildSettings = await Gamer.database.models.guild.findOne({ guildID: originalServer.id })
     if (!guildSettings || !guildSettings.network.channelIDs.notifications) return
 
     // Find the notifications channel from that server
@@ -191,9 +194,7 @@ async function handleNetworkReaction(message: Message, emoji: ReactionEmoji, use
         const usersGuild = userSettings.network.guildID ? Gamer.guilds.get(userSettings.network.guildID) : undefined
         if (!usersGuild) return
 
-        const usersGuildSettings = await Gamer.database.models.guild.findOne({
-          id: userSettings.network.guildID
-        })
+        const usersGuildSettings = await Gamer.database.models.guild.findOne({ guildID: userSettings.network.guildID })
         if (!usersGuildSettings || !usersGuildSettings.network.channelIDs.wall) return
 
         const wallChannel = Gamer.getChannel(usersGuildSettings.network.channelIDs.wall)
@@ -255,9 +256,7 @@ async function handleNetworkReaction(message: Message, emoji: ReactionEmoji, use
         const usersGuild = userSettings.network.guildID ? Gamer.guilds.get(userSettings.network.guildID) : undefined
         if (!usersGuild) return
 
-        const usersGuildSettings = await Gamer.database.models.guild.findOne({
-          id: userSettings.network.guildID
-        })
+        const usersGuildSettings = await Gamer.database.models.guild.findOne({ guildID: userSettings.network.guildID })
         if (!usersGuildSettings || !usersGuildSettings.network.channelIDs.feed) return
 
         // Check if the user is already following the original poster
@@ -307,11 +306,11 @@ async function handleFeedbackReaction(message: Message, emoji: ReactionEmoji, us
   if (!message.embeds.length || message.author.id !== Gamer.user.id) return
 
   // Check if this message is a feedback message
-  const feedback = await Gamer.database.models.feedback.findOne({ id: message.id })
+  const feedback = await Gamer.database.models.feedback.findOne({ feedbackID: message.id })
   if (!feedback) return
 
   // Fetch the guild settings for this guild
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: guild.id })
   if (!guildSettings) return
 
   // Check if valid feedback channel
@@ -364,7 +363,7 @@ async function handleFeedbackReaction(message: Message, emoji: ReactionEmoji, us
         )
       }
       // They have an open mail so we can just send it there
-      const mailChannel = guild.channels.get(openMail.id)
+      const mailChannel = guild.channels.get(openMail.channelID)
       if (!mailChannel || !(mailChannel instanceof TextChannel)) return
       return mailChannel.createMessage({ content: user.mention, embed: message.embeds[0] })
     // This case will run if the reaction was the solved green check mark
@@ -409,7 +408,7 @@ async function handleFeedbackReaction(message: Message, emoji: ReactionEmoji, us
         const reactions = feedbackEmojis.map((emoji: string) => Gamer.helpers.discord.convertEmoji(emoji, `reaction`))
         for (const reaction of reactions) if (reaction) await approvedFeedback.addReaction(reaction)
 
-        feedback.id = approvedFeedback.id
+        feedback.feedbackID = approvedFeedback.id
         feedback.save()
         return message.delete().catch(() => undefined)
       }
@@ -505,7 +504,7 @@ async function handleAutoRole(message: Message, guild: Guild, userID: string) {
   if (!bot || !bot.permission.has('manageRoles')) return
 
   const role = highestRole(bot)
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: guild.id })
   if (!guildSettings?.moderation.roleIDs.autorole) return
 
   const autorole = message.member.guild.roles.get(guildSettings.moderation.roleIDs.autorole)
@@ -525,6 +524,44 @@ async function handleAutoRole(message: Message, guild: Guild, userID: string) {
   if (!member) return
 
   return addRoleToMember(member, guildSettings.moderation.roleIDs.autorole, language(`basic/verify:AUTOROLE_ASSIGNED`))
+}
+
+async function handlePollReaction(message: Message, emoji: ReactionEmoji, user: User, guild: Guild) {
+  if (!constants.emojis.letters.includes(emoji.name)) return
+
+  const poll = await Gamer.database.models.poll.findOne({ messageID: message.id })
+  if (!poll) return
+
+  const member = await Gamer.helpers.discord.fetchMember(guild, user.id)
+  if (!member) return
+
+  const language = Gamer.getLanguage(guild.id)
+  // If the user does not have atleast 1 role of the required roles cancel
+  if (poll.allowedRoleIDs.length && !poll.allowedRoleIDs.some(roleID => member.roles.includes(roleID))) {
+    message.channel
+      .createMessage(language('utility/pollvote:MISSING_ROLE', { mention: user.mention }))
+      .then(m => deleteMessage(m, 10))
+    return message.removeReaction(emoji.name, user.id)
+  }
+
+  const voters = await fetchAllReactors(message)
+  let votesByUser = 0
+  for (const users of voters.values()) {
+    for (const reactionUser of users) {
+      if (reactionUser.id !== user.id) continue
+      votesByUser++
+    }
+  }
+
+  if (votesByUser <= poll.maxVotes) return
+
+  // User has already exceed max vote counts
+  // Alert the user they reached max votes
+  message.channel
+    .createMessage(language('utility/pollvote:MAX_VOTES', { mention: user.mention, max: poll.maxVotes }))
+    .then(msg => deleteMessage(msg, 10))
+  // Remove their vote now.
+  message.removeReaction(emoji.name, user.id)
 }
 
 export default new EventListener('messageReactionAdd', async (rawMessage, emoji, userID) => {
@@ -559,4 +596,5 @@ export default new EventListener('messageReactionAdd', async (rawMessage, emoji,
   handleEventReaction(message, emoji, userID, guild)
   handleNetworkReaction(message, emoji, user, guild)
   handleFeedbackReaction(message, emoji, user, guild)
+  handlePollReaction(message, emoji, user, guild)
 })

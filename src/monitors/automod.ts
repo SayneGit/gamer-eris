@@ -2,17 +2,16 @@ import Monitor from '../lib/structures/Monitor'
 import { Message, GuildTextableChannel } from 'eris'
 import GamerClient from '../lib/structures/GamerClient'
 import { GuildSettings } from '../lib/types/settings'
-import { MessageEmbed } from 'helperis'
+import { MessageEmbed, userTag } from 'helperis'
 import * as confusables from 'confusables'
 import getURLs from 'get-urls'
+import { sendMessage, deleteMessage } from '../lib/utils/eris'
 
 export default class extends Monitor {
   async execute(message: Message, Gamer: GamerClient) {
     if (!message.guildID || !message.member) return
 
-    const settings = await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })
+    const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
     // If they have default settings, then no automoderation features will be enabled
     if (!settings) return
 
@@ -32,6 +31,16 @@ export default class extends Monitor {
 
     let content = `${message.content}`
 
+    const logEmbed = new MessageEmbed()
+      .setAuthor(userTag(message.author), message.author.avatarURL)
+      .setTitle(language('moderation/logs:CAP_SPAM'))
+      .setThumbnail('https://i.imgur.com/E8IfeWc.png')
+      .setDescription(message.content)
+      .addField(language('moderation/logs:MESSAGE_ID'), message.id)
+      .addField(language('moderation/logs:CHANNEL'), message.channel.mention)
+      .setFooter(language('moderation/logs:XP_LOST', { amount: 3 }))
+      .setTimestamp(message.timestamp)
+
     // Run the filter and get back either null or cleaned string
     const capitalSpamCleanup = this.capitalSpamFilter(message, settings)
     // If a cleaned string is returned set the content to the string
@@ -47,6 +56,9 @@ export default class extends Monitor {
         timestamp: message.timestamp,
         type: 'CAPITAL_SPAM_DELETED'
       })
+
+      if (settings.moderation.logs.modlogsChannelID)
+        sendMessage(settings.moderation.logs.modlogsChannelID, { embed: logEmbed.code })
       reasons.push(language(`common:AUTOMOD_CAPITALS`))
     }
 
@@ -67,6 +79,14 @@ export default class extends Monitor {
           timestamp: message.timestamp,
           type: 'PROFANITY_DELETED'
         })
+      }
+
+      if (naughtyWordCleanup.naughtyWords.length) {
+        logEmbed
+          .setFooter(language('moderation/logs:XP_LOST', { amount: 5 * naughtyWordCleanup.naughtyWords.length }))
+          .setTitle(language('moderation/logs:PROFANITY', { words: naughtyWordCleanup.naughtyWords.join(', ') }))
+        if (settings.moderation.logs.modlogsChannelID)
+          sendMessage(settings.moderation.logs.modlogsChannelID, { embed: logEmbed.code })
       }
 
       // If a cleaned string is returned set the content to the string
@@ -91,6 +111,15 @@ export default class extends Monitor {
           type: 'URLS_DELETED'
         })
       }
+
+      if (linkFilterCleanup.filteredURLs.length) {
+        logEmbed
+          .setFooter(language('moderation/logs:XP_LOST', { amount: 5 * linkFilterCleanup.filteredURLs.length }))
+          .setTitle(language('moderation/logs:LINK_POSTED', { links: linkFilterCleanup.filteredURLs.join(', ') }))
+        if (settings.moderation.logs.modlogsChannelID)
+          sendMessage(settings.moderation.logs.modlogsChannelID, { embed: logEmbed.code })
+      }
+
       reasons.push(language(`common:AUTOMOD_URLS`))
     }
 
@@ -110,7 +139,7 @@ export default class extends Monitor {
     message.channel.createMessage({ embed: embed.code })
     if (reasons.length > 1) {
       const reason = await message.channel.createMessage(`${message.author.mention} ${reasons.join('\n')}`)
-      setTimeout(() => reason.delete().catch(() => undefined), 3000)
+      deleteMessage(reason, 3, language('common:CLEAR_SPAM'))
     }
   }
 

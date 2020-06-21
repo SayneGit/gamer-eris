@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 
 export default new mongoose.Schema({
-  id: String,
   userID: { type: String, required: true, index: true },
   guildIDs: { type: [String], default: [], index: true },
   profile: {
@@ -59,8 +58,6 @@ export default new mongoose.Schema({
     badgesUnlocked: { type: Number, min: 1, max: 4, default: 1 }
   },
   network: {
-    // All the users that are following this user
-    followerIDs: { type: [String], default: [] },
     // The guild id where this users social network exists
     guildID: String
   }

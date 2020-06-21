@@ -32,7 +32,16 @@ async function handleRolePerms(
     const role = channel.guild.roles.get(settings.verify.roleID)
     if (!role || role.position >= botHighestRole.position) return
 
-    channel.editPermission(settings.verify.roleID, 0, 1024, `role`, language(`basic/verify:PERMISSION`))
+    Gamer.helpers.logger.debug(`Channel Created: Denying Verify Role View Perms`, 'green')
+    channel
+      .editPermission(settings.verify.roleID, 0, 1024, `role`, language(`basic/verify:PERMISSION`))
+      .catch(error => {
+        Gamer.helpers.logger.debug(
+          `Channel Created: Denying Verify Role Failed => Guild ID: ${channel.guild.id} Guild Name: ${channel.guild.name} Channel Name: ${channel.name} Channel ID: ${channel.id} Channel Type: ${channel.type}`,
+          'red'
+        )
+        throw error
+      })
   }
 
   // If the mute role exists disable all SEND/SPEAK permissions
@@ -124,7 +133,7 @@ export default new EventListener('channelCreate', async (channel, context) => {
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(channel.guild.id)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: channel.guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: channel.guild.id })
   if (!guildSettings) return
 
   handleRolePerms(channel, Gamer.user.id, guildSettings, language)

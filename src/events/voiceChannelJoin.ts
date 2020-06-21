@@ -2,6 +2,7 @@ import { Member, VoiceChannel, TextChannel } from 'eris'
 import Gamer from '../index'
 import { MessageEmbed, userTag } from 'helperis'
 import { EventListener } from 'yuuko'
+import { upsertMember } from '../database/mongoHandler'
 
 export async function voiceChannelJoinServerLog(member: Member, channel: VoiceChannel) {
   const language = Gamer.getLanguage(member.guild.id)
@@ -24,7 +25,7 @@ export async function voiceChannelJoinServerLog(member: Member, channel: VoiceCh
     .setThumbnail(`https://i.imgur.com/Ya0SXdI.png`)
     .setTimestamp()
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: member.guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: member.guild.id })
   if (!guildSettings?.moderation.logs.serverlogs.members.channelID) return
 
   const logChannel = member.guild.channels.get(guildSettings.moderation.logs.serverlogs.members.channelID)
@@ -40,13 +41,7 @@ export default new EventListener('voiceChannelJoin', async (member, channel) => 
   voiceChannelJoinServerLog(member, channel)
   if (member.bot) return
 
-  const memberSettings =
-    (await Gamer.database.models.member.findOne({ memberID: member.id, guildID: member.guild.id })) ||
-    (await Gamer.database.models.member.create({
-      memberID: member.id,
-      guildID: member.guild.id,
-      id: `${member.guild.id}.${member.id}`
-    }))
+  const memberSettings = await upsertMember(member.id, member.guild.id)
 
   memberSettings.leveling.joinedVoiceAt = Date.now()
   memberSettings.save()

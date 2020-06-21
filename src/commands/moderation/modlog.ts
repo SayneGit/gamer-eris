@@ -6,7 +6,7 @@ export default new Command([`modlog`, `ml`], async (message, args, context) => {
   if (!message.member) return
 
   const Gamer = context.client as GamerClient
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [userID, caseID] = args
@@ -46,7 +46,8 @@ export default new Command([`modlog`, `ml`], async (message, args, context) => {
     mute: 0,
     unmute: 0,
     warn: 0,
-    kick: 0
+    kick: 0,
+    note: 0
   }
 
   for (const log of sortedModLogs) {

@@ -39,13 +39,13 @@ export default new Command([`mirrorcreate`, `mc`], async (message, args, context
       language(`network/mirrorcreate:MISSING_WEBHOOK_PERMS`, { channel: mirrorChannel.mention })
     )
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 
   // Extra layer of security to prevent abuse
   if (firstIDGuild) {
-    const targetGuildSettings = await Gamer.database.models.guild.findOne({ id: firstID })
+    const targetGuildSettings = await Gamer.database.models.guild.findOne({ guildID: firstID })
     if (!Gamer.helpers.discord.isAdmin(message, targetGuildSettings?.staff.adminRoleID)) return
   }
 
@@ -68,8 +68,10 @@ export default new Command([`mirrorcreate`, `mc`], async (message, args, context
     mirrorChannelID: mirrorChannel.id,
     sourceGuildID: message.member.guild.id,
     mirrorGuildID: mirrorChannel.guild.id,
-    webhookToken: webhookExists?.webhookToken || webhook?.token,
-    webhookID: webhookExists?.webhookID || webhook?.id
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    webhookToken: webhookExists?.webhookToken || webhook!.token,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    webhookID: webhookExists?.webhookID || webhook!.id
   })
 
   // Add in cache

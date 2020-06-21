@@ -7,18 +7,26 @@ import fetch from 'node-fetch'
 import { milliseconds } from '../lib/types/enums/time'
 import { MessageEmbed } from 'helperis'
 import { fetchLatestManga } from '../services/manga'
-import { weeklyVoteReset, vipExpiredCheck } from '../lib/utils/voting'
+import { weeklyVoteReset, processBotLists } from '../lib/utils/botlists'
 import { dailyLifeTasksReset } from '../lib/utils/marriage'
 import { EventListener } from 'yuuko'
+import { processPolls } from '../lib/utils/poll'
+import { processYoutubeSubscriptions } from '../lib/utils/youtube'
+import { processRedditSubscriptions } from '../lib/utils/reddit'
 
 export default new EventListener('ready', async () => {
   Gamer.helpers.logger.green(`[READY] Event has been emitted. Now preparing bot cache and tasks.`)
-  const embed = new MessageEmbed()
-    .setColor(`#1abc9c`)
-    .setTitle(`Connected to the Gateway`)
-    .setDescription(`All shards are connected. The ready event has been emitted.`)
-    .setTimestamp()
-  Gamer.createMessage(`680852595061162014`, { embed: embed.code })
+
+  if (Gamer.user.id === constants.general.gamerID) {
+    const embed = new MessageEmbed()
+      .setColor(`#1abc9c`)
+      .setTitle(`Connected to the Gateway`)
+      .setDescription(`All shards are connected. The ready event has been emitted.`)
+      .setTimestamp()
+    Gamer.createMessage(`680852595061162014`, { embed: embed.code })
+
+    Gamer.createMessage(`578624588552994840`, 'The bot is now online and ready. Preparing the bot cache and tasks now.')
+  }
   setInterval(async () => {
     // Clean out message collectors after 2 minutes of no response
     Gamer.helpers.discord.processMessageCollectors()
@@ -71,12 +79,12 @@ export default new EventListener('ready', async () => {
     Gamer.helpers.events.process()
     Gamer.helpers.events.processReminders()
     Gamer.helpers.moderation.processMutes()
+    processPolls()
   }, milliseconds.MINUTE)
 
   // All processes that need to be run every day
   setInterval(() => {
     weeklyVoteReset()
-    vipExpiredCheck()
     Gamer.helpers.levels.processInactiveXPRemoval()
     dailyLifeTasksReset()
   }, milliseconds.DAY)
@@ -141,6 +149,10 @@ export default new EventListener('ready', async () => {
   }, milliseconds.SECOND * 5)
 
   weeklyVoteReset()
+  processYoutubeSubscriptions()
+  processRedditSubscriptions()
+  processBotLists()
+
   Gamer.helpers.logger.green(`Loading all tags into cache now...`)
   // Set the tags in cache
   const tags = await Gamer.database.models.tag.find()
@@ -159,29 +171,30 @@ export default new EventListener('ready', async () => {
     }
   }
   Gamer.helpers.logger.green(`Preparing all cached settings like prefix, languages etc into cache now...`)
+  Gamer.helpers.logger.green(`Preparing cached guild settings`)
   // Cache all the guilds prefixes so we dont need to fetch it every message to check if its a command
   const allGuildSettings = await Gamer.database.models.guild.find()
   allGuildSettings.forEach(settings => {
     if (settings.prefix !== Gamer.prefix) {
-      Gamer.guildPrefixes.set(settings.id, settings.prefix)
+      Gamer.guildPrefixes.set(settings.guildID, settings.prefix)
     }
     if (settings.language !== `en-US`) {
-      Gamer.guildLanguages.set(settings.id, settings.language)
+      Gamer.guildLanguages.set(settings.guildID, settings.language)
     }
     if (settings.mails.supportChannelID) {
-      Gamer.guildSupportChannelIDs.set(settings.id, settings.mails.supportChannelID)
+      Gamer.guildSupportChannelIDs.set(settings.guildID, settings.mails.supportChannelID)
     }
     if (settings.disableTenor) {
-      Gamer.guildsDisableTenor.set(settings.id, settings.disableTenor)
+      Gamer.guildsDisableTenor.set(settings.guildID, settings.disableTenor)
     }
-    if (settings.xp.perMessage) Gamer.guildsXPPerMessage.set(settings.id, settings.xp.perMessage)
-    if (settings.xp.perMinuteVoice) Gamer.guildsXPPerMinuteVoice.set(settings.id, settings.xp.perMinuteVoice)
-    if (settings.vip.isVIP) Gamer.vipGuildIDs.add(settings.id)
+    if (settings.xp.perMessage) Gamer.guildsXPPerMessage.set(settings.guildID, settings.xp.perMessage)
+    if (settings.xp.perMinuteVoice) Gamer.guildsXPPerMinuteVoice.set(settings.guildID, settings.xp.perMinuteVoice)
+    if (settings.vip.isVIP) Gamer.vipGuildIDs.add(settings.guildID)
   })
 
   // Stop caching messages where we don't need server logs
   Gamer.guilds.forEach(guild => {
-    const guildSettings = allGuildSettings.find(gs => gs.id === guild.id)
+    const guildSettings = allGuildSettings.find(gs => gs.guildID === guild.id)
     if (
       guildSettings?.moderation.logs.serverlogs.messages.channelID &&
       guild.channels.has(guildSettings.moderation.logs.serverlogs.messages.channelID)
@@ -193,14 +206,29 @@ export default new EventListener('ready', async () => {
     })
   })
 
+  Gamer.helpers.logger.green(`Preparing all custom command cache settings`)
   const customCommands = await Gamer.database.models.command.find()
   customCommands.forEach(command => {
     Gamer.guildCommandPermissions.set(`${command.guildID}.${command.name}`, command)
   })
 
+  Gamer.helpers.logger.green(`Preparing all cached mirror settings.`)
   const mirrors = await Gamer.database.models.mirror.find()
   mirrors.forEach(mirror => {
     Gamer.mirrors.set(mirror.sourceChannelID, mirror)
+  })
+
+  Gamer.helpers.logger.green(`Preparing all spy records.`)
+  const spyRecords = await Gamer.database.models.spy.find()
+  spyRecords.forEach(record => {
+    record.words.forEach(word => {
+      const details = Gamer.spyRecords.get(word.toLowerCase())
+      if (details) {
+        details.push(record.memberID)
+      } else {
+        Gamer.spyRecords.set(word, [record.memberID])
+      }
+    })
   })
 
   Gamer.helpers.logger.green(`[READY] All shards completely ready now.`)

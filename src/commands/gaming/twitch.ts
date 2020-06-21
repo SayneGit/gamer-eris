@@ -6,7 +6,7 @@ export default new Command(`twitch`, async (message, args, context) => {
   if (!message.guildID) return
 
   const Gamer = context.client as GamerClient
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin/mod cancel out
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
@@ -18,7 +18,7 @@ export default new Command(`twitch`, async (message, args, context) => {
   const language = Gamer.getLanguage(message.guildID)
 
   if (type && type.toLowerCase() === `list`) {
-    const twitchSubs = await Gamer.database.models.subscription.find()
+    const twitchSubs = await Gamer.database.models.subscription.find({ type: GamerSubscriptionType.TWITCH })
 
     let response = ``
     for (const sub of twitchSubs) {
@@ -32,7 +32,7 @@ export default new Command(`twitch`, async (message, args, context) => {
     }
 
     if (!response.length) return message.channel.createMessage(language(`gaming/twitch:NONE`))
-    return message.channel.createMessage(response)
+    return Gamer.helpers.discord.embedResponse(message, response)
   }
 
   // Fetch this username from subscriptions specifically for twitch
@@ -56,11 +56,12 @@ export default new Command(`twitch`, async (message, args, context) => {
       if (!userSubscription) {
         const payload = {
           username,
-          type: `twitch`,
+          type: GamerSubscriptionType.TWITCH,
           subs: [subPayload]
         }
 
-        await Gamer.database.models.subscription.create(payload)
+        const sub = new Gamer.database.models.subscription(payload)
+        await sub.save()
 
         return message.channel.createMessage(
           language(`gaming/twitch:SUBSCRIBED`, { username, channel: message.channel.mention })

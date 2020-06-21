@@ -4,10 +4,10 @@ import GamerClient from '../lib/structures/GamerClient'
 import { MessageEmbed } from 'helperis'
 import constants from '../constants'
 import nodefetch from 'node-fetch'
+import { DiscordPermission } from '../lib/utils/discord'
 
 const postReactions = [constants.emojis.heart, constants.emojis.repeat, constants.emojis.plus]
-const postPermissions = [
-  'readMessages',
+const postPermissions: DiscordPermission[] = [
   'addReactions',
   'embedLinks',
   'sendMessages',
@@ -24,9 +24,7 @@ export default class extends Monitor {
     // Only server admins can post in the wall channels
     if (!message.member.permission.has('administrator')) return
 
-    const guildSettings = await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })
+    const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
     // Either the guild doesnt have custom settings or the wall channel wasnt setup or this isnt in the wall channel
     if (!guildSettings?.network.channelIDs.wall || guildSettings.network.channelIDs.wall !== message.channel.id) return

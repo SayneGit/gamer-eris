@@ -6,7 +6,7 @@ export default new Command([`eventadvertise`, `ead`], async (message, args, cont
 
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName(`help`)
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [number] = args
@@ -15,7 +15,7 @@ export default new Command([`eventadvertise`, `ead`], async (message, args, cont
   if (!eventID) return helpCommand?.execute(message, [`eventadvertise`], { ...context, commandName: 'help' })
   // Get the event from this server using the id provided
   const event = await Gamer.database.models.event.findOne({
-    id: eventID,
+    eventID,
     guildID: message.guildID
   })
   const language = Gamer.getLanguage(message.guildID)

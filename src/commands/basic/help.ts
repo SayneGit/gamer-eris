@@ -16,6 +16,7 @@ const categories = [
       `8ball`,
       `avatar`,
       `baka`,
+      `bite`,
       `coinflip`,
       `compliment`,
       `cuddle`,
@@ -85,7 +86,10 @@ const categories = [
       `viewprofanity`
     ]
   },
-  { name: `utility`, commands: [`imgur`, `quote`] },
+  {
+    name: `utility`,
+    commands: [`bots`, `imgur`, `pollcreate`, `pollend`, `pollvote`, `quote`, `reddit`, `setup`, `youtube`]
+  },
   { name: `feedback`, commands: [`bugs`, `idea`] },
   {
     name: `roles`,
@@ -130,10 +134,10 @@ const categories = [
   },
   {
     name: `moderation`,
-    commands: [`purge`, `nick`, `ban`, `unban`, `kick`, `mute`, `move`, `unmute`, `warn`, `modlog`, `reason`]
+    commands: [`purge`, `nick`, `ban`, `unban`, `kick`, `mute`, `move`, `note`, `unmute`, `warn`, `modlog`, `reason`]
   },
   { name: `mails`, commands: [`mail`, `label`] },
-  { name: `vip`, commands: [`analyze`, `analyzechannel`, `vipregister`, `roletoall`, `rolefromall`, `export`] },
+  { name: `vip`, commands: [`analyze`, `analyzechannel`, `vipregister`, `roletoall`, `rolefromall`, `spy`, `export`] },
   { name: `network`, commands: [`networkcreate`, `networkfollow`, `mirrorcreate`, `mirroredit`] },
   { name: `gaming`, commands: [`twitch`, `capture`, `dice`] },
   { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`, `embedset`] },
@@ -148,7 +152,7 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   if (!message.guildID) return message.channel.createMessage(`Please use this command in a server. Thank you!`)
 
   const Gamer = context.client as GamerClient
-  const settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   const language = Gamer.getLanguage(message.guildID)
 

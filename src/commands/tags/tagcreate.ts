@@ -11,7 +11,7 @@ export default new Command([`tagcreate`, `tc`], async (message, args, context) =
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
@@ -60,7 +60,9 @@ export default new Command([`tagcreate`, `tc`], async (message, args, context) =
       type: validType.name
     }
 
-    const tag = await Gamer.database.models.tag.create(payload)
+    const tag = new Gamer.database.models.tag(payload)
+    await tag.save()
+
     Gamer.tags.set(`${payload.guildID}.${tagName}`, tag)
     return message.channel.createMessage(language(`tags/tagcreate:SAVED`, { name }))
   } catch (error) {

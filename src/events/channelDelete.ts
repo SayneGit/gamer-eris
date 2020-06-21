@@ -10,7 +10,7 @@ export default new EventListener('channelDelete', async (channel, context) => {
 
   if (channel instanceof TextChannel) {
     // Check if this channel was a mail channel
-    const mailChannel = await Gamer.database.models.mail.findOne({ id: channel.id })
+    const mailChannel = await Gamer.database.models.mail.findOne({ channelID: channel.id })
     // If it was a mail channel delete it
     if (mailChannel) Gamer.database.models.mail.deleteOne({ _id: mailChannel._id }).exec()
 
@@ -30,7 +30,7 @@ export default new EventListener('channelDelete', async (channel, context) => {
   // Server logs feature
   const language = Gamer.getLanguage(channel.guild.id)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: channel.guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: channel.guild.id })
 
   // If there is no channel set for logging this cancel
   if (!guildSettings?.moderation.logs.serverlogs.channels.channelID) return

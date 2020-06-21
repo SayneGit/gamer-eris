@@ -21,7 +21,7 @@ export default new Command([`profile`, `p`, `prof`], async (message, args, conte
   })
 
   const [guildSettings, missionData, upvote] = await Promise.all([
-    await Gamer.database.models.guild.findOne({ id: member.guild.id }),
+    await Gamer.database.models.guild.findOne({ guildID: member.guild.id }),
     await Gamer.database.models.mission.find({ userID: member.id }),
     await Gamer.database.models.upvote.findOne({
       userID: member.id,
@@ -67,7 +67,7 @@ export default new Command([`profile`, `p`, `prof`], async (message, args, conte
     userID: message.author.id
   })
 
-  const backgroundID = userSettings?.profile.backgroundID || 1
+  const backgroundID = userSettings?.profile?.backgroundID || 1
   const backgroundData = constants.profiles.backgrounds.find(bg => bg.id === backgroundID)
   const isDefaultBackground = backgroundData && backgroundData.name === constants.profiles.defaultBackground
   const hasPermission = Gamer.helpers.discord.checkPermissions(message.channel, Gamer.user.id, [

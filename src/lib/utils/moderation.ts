@@ -28,22 +28,17 @@ export default class {
     const member = await this.Gamer.helpers.discord.fetchMember(message.member.guild, user.id)
     if (member) {
       const memberSettings = await this.Gamer.database.models.member.findOne({
-        memberID: user.id
+        memberID: user.id,
+        guildID: member.guild.id
       })
       if (memberSettings) {
         const currentXP = memberSettings.leveling.xp
         switch (action) {
-          case `kick`: // Remove 50% when kicked
-            if (currentXP > 0) this.Gamer.helpers.levels.removeXP(member, Math.floor(currentXP / 2))
-            break
           case `warn`:
             this.Gamer.helpers.levels.removeXP(member, currentXP > 25 ? 25 : currentXP)
             break
           case `mute`:
             this.Gamer.helpers.levels.removeXP(member, currentXP > 100 ? 100 : currentXP)
-            break
-          case `ban`:
-            if (currentXP > 0) this.Gamer.helpers.levels.removeXP(member, currentXP)
             break
           default:
         }
@@ -67,7 +62,8 @@ export default class {
       messageID: undefined,
       reason,
       timestamp: message.timestamp,
-      userID: user.id
+      userID: user.id,
+      needsUnmute: false
     })
 
     if (action === `mute` && duration) {
@@ -176,7 +172,7 @@ export default class {
       const guild = this.Gamer.guilds.get(log.guildID)
       if (!guild) continue
       // Get the guild settings to get the mute role id
-      const guildSettings = await this.Gamer.database.models.guild.findOne({ id: log.guildID })
+      const guildSettings = await this.Gamer.database.models.guild.findOne({ guildID: log.guildID })
       // If there is no guildsettings or no role id skip
       if (!guildSettings?.moderation.roleIDs.mute) continue
       // If the mute role is not present in the guild, skip.
@@ -211,7 +207,7 @@ export default class {
     allGuildSettings.forEach(async guildSettings => {
       if (!guildSettings.verify.channelIDs.length) return
 
-      const guild = this.Gamer.guilds.get(guildSettings.id)
+      const guild = this.Gamer.guilds.get(guildSettings.guildID)
       if (!guild) return
 
       guildSettings.verify.channelIDs.forEach(async channelID => {

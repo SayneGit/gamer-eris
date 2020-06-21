@@ -311,13 +311,14 @@ export default class {
       guildID: member?.guild.id
     })
 
-    if (reactionRole) return message.channel.createMessage(language(`roles/reactionrolecreate:NAME_EXISTS`, { name }))
+    if (reactionRole)
+      return message.channel.createMessage(language(`roles/reactionrolecreate:NAME_EXISTS`, { name: 'colors' }))
 
     const exists = await this.Gamer.database.models.roleset.findOne({
       name: 'colors',
       guildID: member?.guild.id
     })
-    if (exists) return message.channel.createMessage(language(`roles/rolesetcreate:EXISTS`, { name }))
+    if (exists) return message.channel.createMessage(language(`roles/rolesetcreate:EXISTS`, { name: 'colors' }))
 
     // Create all 20 roles
 
@@ -342,7 +343,8 @@ export default class {
     this.Gamer.database.models.reactionRole.create({
       name: 'colors',
       reactions: roles.map((role, index) => ({
-        reaction: this.Gamer.helpers.discord.convertEmoji(reactionRoleData[index].emoji, `reaction`),
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        reaction: this.Gamer.helpers.discord.convertEmoji(reactionRoleData[index].emoji, `reaction`)!,
         roleIDs: [role.id]
       })),
       messageID: baseMessage.id,

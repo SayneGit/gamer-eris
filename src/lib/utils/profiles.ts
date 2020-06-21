@@ -78,8 +78,8 @@ export default class {
     ])
 
     // Select the background theme & id from their settings if no override options were provided
-    const style = (options && options.style) || userSettings?.profile.theme || 'white'
-    const backgroundID = (options && options.backgroundID) || userSettings?.profile.backgroundID || 1
+    const style = (options && options.style) || userSettings?.profile?.theme || 'white'
+    const backgroundID = (options && options.backgroundID) || userSettings?.profile?.backgroundID || 1
 
     const useDefaultProfile = style === 'white' && backgroundID === 1
     // Get background data OR If the background is invalid then set it to default values
@@ -90,7 +90,7 @@ export default class {
 
     // SERVER XP DATA
     const serverLevelDetails = Constants.levels.find(lev => lev.xpNeeded > (memberSettings?.leveling.xp || 0))
-    const globalLevelDetails = Constants.levels.find(lev => lev.xpNeeded > (userSettings?.leveling.xp || 0))
+    const globalLevelDetails = Constants.levels.find(lev => lev.xpNeeded > (userSettings?.leveling?.xp || 0))
     const previousServerLevelDetails =
       Constants.levels.find(lev => lev.level === (serverLevelDetails?.level || 0) - 1) || constants.levels[0]
     const previousGlobalLevelDetails =
@@ -100,7 +100,7 @@ export default class {
     const memberLevel = serverLevelDetails.level
     const totalMemberXP = memberSettings?.leveling.xp || 0
     const globalLevel = globalLevelDetails.level
-    const totalGlobalXP = userSettings?.leveling.xp || 0
+    const totalGlobalXP = userSettings?.leveling?.xp || 0
     // Since XP is stored as TOTAL and is not reset per level we need to make a cleaner version
     // Create the cleaner xp based on the level of the member
     let memberXP = totalMemberXP
@@ -186,7 +186,7 @@ export default class {
         .addRoundImage(Gamer.buffers.profiles.badges.loud, 120, 455, 50, 50, 25, true)
 
       // user badges
-      if (Gamer.helpers.discord.isBotOwnerOrMod(message) || userSettings?.vip.isVIP) {
+      if (Gamer.helpers.discord.isBotOwnerOrMod(message) || userSettings?.vip?.isVIP) {
         canvas.addRoundImage(Gamer.buffers.profiles.badges.vip, 195, 455, 50, 50, 25, true)
         // Spots to add user custom badges
         // canvas.addRoundImage(Gamer.buffers.profiles.badges.shoptitans, 120, 455, 50, 50, 25, true)
@@ -225,7 +225,7 @@ export default class {
     canvas
       .setColor(mode.clanName)
       .setTextFont(`16px LatoBold`)
-      .addText(language('leveling/profile:COINS', { amount: userSettings?.leveling.currency || 0 }), 600, 463)
+      .addText(language('leveling/profile:COINS', { amount: userSettings?.leveling?.currency || 0 }), 600, 463)
       .addText(
         language('leveling/profile:BOOSTS', {
           amount: idleProfile ? Math.round(idleProfile.currency).toLocaleString() : 0
@@ -325,8 +325,9 @@ export default class {
       .setTextAlign(`left`)
       .setTextFont(`16px LatoBold`)
       .addText(
-        `${memberXP}/${serverLevelDetails.xpNeeded - previousServerLevelDetails?.xpNeeded ||
-          serverLevelDetails.xpNeeded}`,
+        `${memberXP}/${
+          serverLevelDetails.xpNeeded - previousServerLevelDetails?.xpNeeded || serverLevelDetails.xpNeeded
+        }`,
         190,
         260
       )

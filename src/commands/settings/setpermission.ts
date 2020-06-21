@@ -8,7 +8,7 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
   const language = Gamer.getLanguage(message.guildID)
   const helpCommand = Gamer.commandForName('help')
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
@@ -50,7 +50,8 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
         exceptionRoleIDs: roleIDs
       }
 
-      const newPerms = await Gamer.database.models.command.create(payload)
+      const newPerms = new Gamer.database.models.command(payload)
+      await newPerms.save()
       return Gamer.guildCommandPermissions.set(`${message.guildID}.allcommands`, newPerms)
     }
 

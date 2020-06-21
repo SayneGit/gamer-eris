@@ -10,9 +10,7 @@ export default new Command(`label`, async (message, args, context) => {
   if (message.channel instanceof PrivateChannel || message.channel instanceof GroupChannel)
     return Gamer.helpers.mail.handleDM(message, content)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.guildID
-  })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   if (!guildSettings || !Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const helpCommand = Gamer.commandForName(`help`)
@@ -41,7 +39,8 @@ export default new Command(`label`, async (message, args, context) => {
     case `create`:
       if (!name || !categoryID) return helpCommand?.execute(message, [`label`], { ...context, commandName: 'help' })
       const category = message.member.guild.channels.get(categoryID)
-      if (!category || !(category instanceof CategoryChannel)) return helpCommand?.execute(message, [`label`], { ...context, commandName: 'help' })
+      if (!category || !(category instanceof CategoryChannel))
+        return helpCommand?.execute(message, [`label`], { ...context, commandName: 'help' })
 
       const labelExists = await Gamer.database.models.label.findOne({
         name,
@@ -54,7 +53,7 @@ export default new Command(`label`, async (message, args, context) => {
       await Gamer.database.models.label.create({
         authorID: message.author.id,
         categoryID: category.id,
-        guildID: message.guildID,
+        guildID: message.member.guild.id,
         name
       })
 
@@ -69,7 +68,7 @@ export default new Command(`label`, async (message, args, context) => {
         return Gamer.helpers.discord.embedResponse(message, language(`mails/label:INVALID_NAME`, { name }))
 
       const mail = await Gamer.database.models.mail.findOne({
-        id: message.channel.id
+        channelID: message.channel.id
       })
 
       if (!mail) return message.channel.createMessage(language(`mails/label:NOT_MAIL_CHANNEL`))

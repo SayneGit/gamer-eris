@@ -6,7 +6,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
   if (!message.guildID || !message.member) return
 
   const Gamer = context.client as GamerClient
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   if (
     !Gamer.helpers.discord.isModOrAdmin(message, guildSettings) &&
@@ -37,7 +37,7 @@ export default new Command([`eventcreate`, `ec`], async (message, args, context)
   const regex = new RegExp(`${prefix}ee # `, 'gi')
 
   const event = await Gamer.database.models.event.findOne({
-    id: eventID,
+    eventID,
     guildID: message.guildID
   })
   if (!event) return

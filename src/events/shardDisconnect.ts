@@ -4,6 +4,8 @@ import { EventListener } from 'yuuko'
 
 export default new EventListener('shardDisconnect', (error, id) => {
   Gamer.helpers.logger.debug(`[Shard DISCONNECT] Shard ID ${id} disconnected.`)
+  if (!Gamer.getChannel(`680852595061162014`)) return
+
   const embed = new MessageEmbed()
     .setColor(`#e74c3c`)
     .setTitle(`Shard ${id} has been disconnected`)

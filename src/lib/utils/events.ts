@@ -1,14 +1,14 @@
 import { Message, TextChannel } from 'eris'
 import { GuildSettings } from '../types/settings'
 import GamerClient from '../structures/GamerClient'
-import { GamerEvent } from '../types/gamer'
 import fetch from 'node-fetch'
 import { Canvas } from 'canvas-constructor'
 import constants from '../../constants'
 import { MessageEmbed } from 'helperis'
 import config from '../../../config'
 import { TFunction } from 'i18next'
-import { deleteMessageWithID } from './eris'
+import { deleteMessageWithID, deleteMessage } from './eris'
+import { GamerEvent } from '../../database/schemas/event'
 
 const eventCardReactions: string[] = []
 
@@ -29,12 +29,17 @@ export default class {
       : undefined
 
     const language = this.Gamer.getLanguage(message.guildID)
+    const TITLE = language(`events/eventcreate:DEFAULT_TITLE`)
+    const DESCRIPTION = language(`events/eventcreate:DEFAULT_DESCRIPTION`)
+    const PLATFORM = language(`events/eventcreate:DEFAULT_PLATFORM`)
+    const GAME = language(`events/eventcreate:DEFAULT_GAME`)
+    const ACTIVITY = language(`events/eventcreate:DEFAULT_ACTIVITY`)
 
     // 1440 minutes in a day
     const startNow = (template?.minutesFromNow || 1440) * 60000 + Date.now()
 
     const newEvent = {
-      id: this.createNewID(events),
+      eventID: this.createNewID(events),
       authorID: message.author.id,
       guildID: message.guildID,
       // now + X minutes
@@ -46,9 +51,9 @@ export default class {
       waitingList: [],
       reminders: template?.reminders || [600000],
       executedReminders: [],
-      title: template?.title || language(`events/eventcreate:DEFAULT_TITLE`),
+      title: template?.title || TITLE,
       tags: template?.tags || [],
-      description: template?.description || language(`events/eventcreate:DEFAULT_DESCRIPTION`),
+      description: template?.description || DESCRIPTION,
       maxAttendees: template?.maxAttendees || 5,
       hasStarted: false,
       isRecurring: template?.isRecurring || false,
@@ -57,9 +62,9 @@ export default class {
       adChannelID: guildSettings?.eventsAdvertiseChannelID,
       adCardID: undefined,
       createdAt: Date.now(),
-      platform: template?.platform || language(`events/eventcreate:DEFAULT_PLATFORM`),
-      game: template?.game || language(`events/eventcreate:DEFAULT_GAME`),
-      activity: template?.activity || language(`events/eventcreate:DEFAULT_ACTIVITY`),
+      platform: template?.platform || PLATFORM,
+      game: template?.game || GAME,
+      activity: template?.activity || ACTIVITY,
       removeRecurringAttendees: template?.removeRecurringAttendees || false,
       allowedRoleIDs: template?.allowedRoleIDs || [],
       alertRoleIDs: template?.alertRoleIDs || [],
@@ -80,17 +85,17 @@ export default class {
       type: 'EVENT_CREATED'
     })
 
-    return newEvent.id
+    return newEvent.eventID
   }
 
   createNewID(events: GamerEvent[]) {
     if (events.length < 1) return 1
 
-    let id = 1
+    let eventID = 1
 
-    for (const event of events) if (event.id >= id) id = event.id + 1
+    for (const event of events) if (event.eventID >= eventID) eventID = event.eventID + 1
 
-    return id
+    return eventID
   }
 
   async advertiseEvent(event: GamerEvent, channelID?: string) {
@@ -115,7 +120,7 @@ export default class {
       .setTimestamp(event.start)
 
     // If this is being sent to a new channel and an old card exists we need to delete the old one
-    if (event.adChannelID && event.adMessageID && event.adChannelID !== channelID) {
+    if (channelID && event.adChannelID && event.adMessageID && event.adChannelID !== channelID) {
       deleteMessageWithID(event.adChannelID, event.adMessageID)
       event.adMessageID = undefined
       event.adChannelID = undefined
@@ -218,7 +223,7 @@ export default class {
       .setTextFont(`18px SFTHeavy`)
       .setTextAlign(`center`)
       .setColor(event.backgroundURL ? `#FFFFFF` : `#4C4C4C`)
-      .addResponsiveText(`#${event.id}`, 572, 48, 75)
+      .addResponsiveText(`#${event.eventID}`, 572, 48, 75)
 
       .setTextAlign(`left`)
       .setColor(`#9B9B9B`)
@@ -265,7 +270,7 @@ export default class {
 
     return sortedEvents
       .map(event => {
-        let textString = `**[${event.id}] `
+        let textString = `**[${event.eventID}] `
 
         if (event.isRecurring)
           textString += ` 🔁 (${this.Gamer.helpers.transform.humanizeMilliseconds(event.frequency)}) `
@@ -420,7 +425,7 @@ export default class {
     const language = this.Gamer.getLanguage(event.guildID)
 
     const embed = new MessageEmbed()
-      .setAuthor(language(`events/events:STARTING_GUILD`, { eventID: event.id, guildName: guild.name }))
+      .setAuthor(language(`events/events:STARTING_GUILD`, { eventID: event.eventID, guildName: guild.name }))
       .setTitle(language(`events/events:STARTING_TITLE`, { title: event.title }))
       .addField(language(`events/eventshow:RSVP_EMOJI`), `${event.attendees.length} / ${event.maxAttendees}`)
       .addField(language(`events/eventshow:DESC_EMOJI`), event.description)
@@ -451,13 +456,14 @@ export default class {
 
     if (!botPerms.has('readMessages') || !botPerms.has('sendMessages') || !botPerms.has('embedLinks')) return
 
-    adChannel.createMessage({
+    const startMessage = await adChannel.createMessage({
       content: event.alertRoleIDs.map((id: string) => `<@&${id}>`).join(` `),
       embed: embed.code
     })
+    deleteMessage(startMessage, 60)
   }
 
-  remindEvent(event: GamerEvent) {
+  async remindEvent(event: GamerEvent) {
     const guild = this.Gamer.guilds.get(event.guildID)
     if (!guild) return
 
@@ -475,7 +481,7 @@ export default class {
     const startsIn = this.Gamer.helpers.transform.humanizeMilliseconds(event.start - now)
 
     const embed = new MessageEmbed()
-      .setAuthor(language(`events/events:REMIND`, { eventID: event.id }))
+      .setAuthor(language(`events/events:REMIND`, { eventID: event.eventID }))
       .setDescription(event.description)
       .addField(language(`events/events:TITLE`), event.title, true)
       .addField(language(`events/events:STARTS_IN`), startsIn, true)
@@ -488,10 +494,12 @@ export default class {
 
       if (!botPerms.has('readMessages') || !botPerms.has('sendMessages') || !botPerms.has('embedLinks')) return
 
-      adChannel.createMessage({
+      const channelReminder = await adChannel.createMessage({
         content: event.alertRoleIDs.map((id: string) => `<@&${id}>`).join(` `),
         embed: embed.code
       })
+
+      deleteMessage(channelReminder, 60)
     }
 
     if (!event.dmReminders) return
@@ -540,7 +548,7 @@ export default class {
       const embed = new MessageEmbed()
         .setAuthor(member.username, member.avatarURL)
         .setDescription(reminder.content)
-        .setFooter(language(`events/remind:REMINDING`, { id: reminder.id }))
+        .setFooter(language(`events/remind:REMINDING`, { id: reminder.reminderID }))
 
       channel.createMessage({ content: this.Gamer.helpers.discord.idsToUserTag([reminder.userID]), embed: embed.code })
 
