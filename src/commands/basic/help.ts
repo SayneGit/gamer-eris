@@ -139,7 +139,7 @@ const categories = [
   { name: `mails`, commands: [`mail`, `label`] },
   { name: `vip`, commands: [`analyze`, `analyzechannel`, `vipregister`, `roletoall`, `rolefromall`, `spy`, `export`] },
   { name: `network`, commands: [`networkcreate`, `networkfollow`, `mirrorcreate`, `mirroredit`] },
-  { name: `gaming`, commands: [`twitch`, `capture`, `dice`] },
+  { name: `gaming`, commands: [`twitch`, `capture`, `dice`, `idrcreate`, `idrdelete`, `idrupgrade`] },
   { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`, `embedset`] },
   { name: `emojis`, commands: [`emojis`, `emojicreate`, `emojidelete`] },
   { name: `tags`, commands: [`tags`, `tagcreate`, `tagdelete`, `tagshow`, `taginstall`, `taguninstall`, `tagpublic`] },

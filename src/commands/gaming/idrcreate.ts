@@ -13,7 +13,12 @@ export default new Command([`idrcreate`, `idrc`], async (message, _args, context
   if (exists) return message.channel.createMessage(language(`gaming/idrcreate:EXISTS`))
 
   // Create the database object
-  Gamer.database.models.idlediscordrevolution.create({ userID: message.author.id, lastUpdatedAt: Date.now() })
+  const idrProfile = new Gamer.database.models.idlediscordrevolution({
+    userID: message.author.id,
+    lastUpdatedAt: Date.now()
+  })
+  idrProfile.save()
+
   const prefix = Gamer.guildPrefixes.get(message.guildID) || Gamer.prefix
 
   return Gamer.helpers.discord.embedResponse(
