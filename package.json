@@ -33,7 +33,7 @@
     "discord.js-minesweeper": "^1.0.5",
     "eris": "github:abalabahaha/eris#dev",
     "fastify": "^2.15.1",
-    "fastify-helmet": "^3.0.2",
+    "fastify-helmet": "^4.0.2",
     "get-urls": "^9.2.1",
     "helperis": "^1.2.4",
     "i18next": "^19.5.4",
