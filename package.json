@@ -43,7 +43,7 @@
     "node-fetch": "^2.6.0",
     "parse5": "^6.0.0",
     "pino-pretty": "^4.0.0",
-    "rss-parser": "^3.8.0",
+    "rss-parser": "^3.9.0",
     "turndown": "^6.0.0",
     "typescript": "^3.9.6",
     "yuuko": "github:Geo1088/yuuko#builds/event-listener-class"
