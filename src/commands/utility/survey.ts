@@ -8,7 +8,7 @@ import constants from '../../constants'
 // * <create|remove|list|run:default> (name:surveyname)
 
 export default new Command(`survey`, async (message, args, context) => {
-  if (!message.guildID || !message.member || !(message.channel instanceof TextChannel)) return
+  if (!message.member) return
 
   const Gamer = context.client as GamerClient
 
@@ -17,16 +17,17 @@ export default new Command(`survey`, async (message, args, context) => {
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   const [action, surveyName, ...input] = args
 
-  const survey = await Gamer.database.models.survey.findOne({ guildID: message.guildID, name: surveyName })
+  const survey = await Gamer.database.models.survey.findOne({
+    guildID: message.guildID,
+    name: surveyName.toLowerCase()
+  })
 
   switch (action) {
-    /*
-        Remove a survey
-    */
+    // Remove a survey
     case 'remove':
       if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
       if (!survey) return message.channel.createMessage(language(`utility/survey:NOT_FOUND`))
@@ -36,19 +37,6 @@ export default new Command(`survey`, async (message, args, context) => {
         deleted
           ? language(`utility/survey:DELETE_SUCCESS`, { SURVEY_NAME: surveyName })
           : language(`utility/survey:DELETE_FAILED`, { SURVEY_NAME: surveyName })
-      )
-
-    /*
-        List all available surveys
-    */
-    case 'list':
-      const allSurveys = await Gamer.database.models.survey.find({ guildID: message.guildID })
-      if (!allSurveys.length) return message.channel.createMessage(`utility/survey:NO_SURVEYS_FOUND`)
-
-      const surveyList = allSurveys.map(s => s.name).join('\n')
-      return Gamer.helpers.discord.embedResponse(
-        message,
-        surveyList.length > 2000 ? surveyList.substring(0, 1997) + '...' : surveyList
       )
 
     /*
@@ -64,7 +52,7 @@ export default new Command(`survey`, async (message, args, context) => {
     */
     default:
       if (!survey) return message.channel.createMessage(language(`utility/survey:NOT_FOUND`))
-      const channel = message.channel.guild.channels.get(survey.channelID) as TextChannel
+      const channel = message.member.guild.channels.get(survey.channelID) as TextChannel
       if (!channel) return message.channel.createMessage(language(`utility/survey:CHANNEL_DELETED`))
       if (
         !Gamer.helpers.discord.checkPermissions(channel, Gamer.user.id, [
@@ -92,7 +80,7 @@ export default new Command(`survey`, async (message, args, context) => {
           authorID: message.author.id,
           channelID: message.channel.id,
           createdAt: Date.now(),
-          guildID: message.guildID,
+          guildID: message.member.guild.id,
           data: {
             language,
             survey,
@@ -143,21 +131,3 @@ export default new Command(`survey`, async (message, args, context) => {
       return Gamer.helpers.levels.completeMission(message.member, `survey`, message.guildID)
   }
 })
-
-const answerTypes = [
-  { type: `string`, value: `Text.`, arrayPossible: true },
-  { type: `number`, value: `Number`, arrayPossible: true },
-  { type: `member`, value: `@member or member ID.`, arrayPossible: false },
-  { type: `members`, value: `Multiple members.`, arrayDefault: true },
-  { type: `user`, value: `User ID. A user does NOT have to be on the server`, arrayPossible: false },
-  { type: `users`, value: `Multiple users`, arrayDefault: true },
-  { type: `channel`, value: `#channel`, arrayPossible: false },
-  { type: `channels`, value: `Multiple #channels`, arrayDefault: true },
-  {
-    type: `role`,
-    value: `@role or role id. Warning: If the user @role it will actually ping the entire role.`,
-    arrayPossible: false
-  },
-  { type: `roles`, value: `Multiple roles.`, arrayDefault: true },
-  { type: `multiple choice`, value: `Multiple Choice`, arrayPossible: false }
-]
