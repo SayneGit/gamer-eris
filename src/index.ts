@@ -9,6 +9,7 @@ import HooksServices from './services/hooks'
 
 import TwitchService from './services/twitch/index'
 import TopGGAPI from 'dblapi.js'
+import { deleteMessage, sendMessage } from './lib/utils/eris'
 
 // Initiate hooks service
 HooksServices(config.hooks.port)
@@ -36,8 +37,8 @@ const Gamer = new GamerClient({
   maxShards: `auto`,
   ignoreGlobalRequirements: false,
   restMode: true,
-  ignoreBots: true,
   caseSensitiveCommands: false,
+  disableDefaultMessageListener: true,
   // getAllUsers: true,
   intents: [
     'guilds',
@@ -68,23 +69,31 @@ Gamer.globalCommandRequirements = {
 
     // Check if bot has embed links perms
     if (!botPerms.has('embedLinks')) {
-      message.channel.createMessage(language(`common:NEED_EMBED_PERMS`))
+      sendMessage(message.channel.id, language(`common:NEED_EMBED_PERMS`))
       return false
     }
 
     // If the user is using commands within 2 seconds ignore it
     if (Gamer.slowmode.has(message.author.id)) {
-      // Cleans up spam command messages from users
-      if (botPerms.has('manageMessages')) message.delete().catch(() => undefined)
-      return false
+      const prefix = Gamer.guildPrefixes.get(message.guildID)
+      if (prefix) {
+        const [firstWord] = message.content.split(' ')
+        if (firstWord && context.commandName === firstWord.substring(prefix.length)) {
+          // Cleans up spam command messages from users
+          deleteMessage(message)
+          return false
+        }
+      }
     }
 
     const supportChannelID = Gamer.guildSupportChannelIDs.get(message.guildID)
     const isAdmin = message.member?.permission.has('administrator')
     // If it is the support channel and NOT a server admin do not allow command
-    if (message.channel.id === supportChannelID && !isAdmin) return false
+    if (message.channel.id === supportChannelID && !isAdmin && context.commandName !== 'mail') return false
 
-    if (isAdmin || !context.commandName) return true
+    if (isAdmin) return true
+
+    if (!context.commandName) return false
 
     const command = Gamer.commandForName(context.commandName)
     if (!command) return true
@@ -125,10 +134,7 @@ Gamer.globalCommandRequirements = {
   }
 }
 
-Gamer.addCommandDir(`${__dirname}/commands`)
-  .addDirectory(`${__dirname}/monitors`)
-  .addDirectory(`${__dirname}/events`)
-  .connect()
+Gamer.addDir(`${__dirname}/commands`).addDir(`${__dirname}/events`).addDirectory(`${__dirname}/monitors`).connect()
 
 Gamer.prefixes((message: Message) => {
   // If in DM use the default prefix
@@ -139,9 +145,6 @@ Gamer.prefixes((message: Message) => {
   // If in a server with the custom prefix, use the custom prefix
   return prefix
 })
-
-// bind so the `this` is relevent to the event
-for (const [name, event] of Gamer.events) Gamer.on(name, event.execute.bind(event))
 
 process.on('unhandledRejection', error => {
   // Don't send errors for non production bots
@@ -154,7 +157,6 @@ process.on('unhandledRejection', error => {
   if (!error) return
 
   const embed = new MessageEmbed()
-    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
     // @ts-ignore
     .setDescription(['```js', error.stack, '```'].join(`\n`))
     .setTimestamp()

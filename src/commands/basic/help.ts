@@ -3,7 +3,10 @@ import { MessageEmbed } from 'helperis'
 import GamerClient from '../../lib/structures/GamerClient'
 import Constants from '../../constants/index'
 
-const gifs = [{ name: 'mirrorcreate', gif: 'https://i.imgur.com/ORLsc42.gif' }]
+const gifs = [
+  { name: 'mirrorcreate', gif: 'https://i.imgur.com/ORLsc42.gif' },
+  { name: 'setverify', gif: 'https://i.imgur.com/TZxyAwY.gif' }
+]
 
 const categories = [
   { name: `basic`, commands: [`help`, `ping`, `invite`, `server`, `upvote`, `upvotedonate`, `user`] },
@@ -13,9 +16,11 @@ const categories = [
       `8ball`,
       `avatar`,
       `baka`,
+      `bite`,
       `coinflip`,
       `compliment`,
       `cuddle`,
+      `dance`,
       `divorce`,
       `gif`,
       `hug`,
@@ -28,6 +33,7 @@ const categories = [
       `poke`,
       `pony`,
       `puppy`,
+      `raphtalia`,
       `shopwedding`,
       `slap`,
       `slots`,
@@ -35,7 +41,8 @@ const categories = [
       `tickle`,
       `advice`,
       `wisdom`,
-      `urban`
+      `urban`,
+      `zerotwo`
     ]
   },
   {
@@ -77,11 +84,15 @@ const categories = [
       `settenor`,
       `setverify`,
       `setwhitelisted`,
+      `setup`,
       `setxp`,
       `viewprofanity`
     ]
   },
-  { name: `utility`, commands: [`imgur`, `quote`] },
+  {
+    name: `utility`,
+    commands: [`imgur`, `pollcreate`, `pollend`, `pollvote`, `quote`, `reddit`, `setup`, `youtube`]
+  },
   { name: `feedback`, commands: [`bugs`, `idea`] },
   {
     name: `roles`,
@@ -126,10 +137,24 @@ const categories = [
   },
   {
     name: `moderation`,
-    commands: [`purge`, `nick`, `ban`, `unban`, `kick`, `mute`, `move`, `unmute`, `warn`, `modlog`, `reason`]
+    commands: [`purge`, `nick`, `ban`, `unban`, `kick`, `mute`, `move`, `note`, `unmute`, `warn`, `modlog`, `reason`]
   },
   { name: `mails`, commands: [`mail`, `label`] },
-  { name: `vip`, commands: [`analyze`, `analyzechannel`, `vipregister`, `roletoall`, `rolefromall`, `export`] },
+  {
+    name: `vip`,
+    commands: [
+      `bots`,
+      `analyze`,
+      `analyzechannel`,
+      `memberrole`,
+      `vipregister`,
+      `resetanalyze`,
+      `roletoall`,
+      `rolefromall`,
+      `spy`,
+      `export`
+    ]
+  },
   { name: `network`, commands: [`networkcreate`, `networkfollow`, `mirrorcreate`, `mirroredit`] },
   { name: `gaming`, commands: [`twitch`, `capture`, `dice`] },
   { name: `embedding`, commands: [`embed`, `embedshow`, `embededit`, `embedset`] },
@@ -144,7 +169,7 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   if (!message.guildID) return message.channel.createMessage(`Please use this command in a server. Thank you!`)
 
   const Gamer = context.client as GamerClient
-  const settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   const language = Gamer.getLanguage(message.guildID)
 
@@ -154,7 +179,9 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   const CHECKWIKI = language(`basic/help:CHECK_WIKI`)
   const LINKSVALUE = language(`basic/help:LINKS_VALUE`)
 
-  if (!args.length) {
+  const [commandName] = args
+
+  if (!commandName) {
     // Create the main help embed
     const embed = new MessageEmbed()
       .setAuthor(message.author.username, message.author.avatarURL)
@@ -166,8 +193,6 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
 
     return message.channel.createMessage({ embed: embed.code })
   }
-
-  const [commandName] = args
 
   // if (commandName.toLowerCase() === `details`) {
   //   const details = new MessageEmbed().setAuthor(message.author.username, message.author.avatarURL)
@@ -220,10 +245,11 @@ export default new Command([`help`, `h`, `commands`, `cmds`], async (message, ar
   if (!command)
     return Gamer.helpers.discord.embedResponse(message, language(`basic/help:UNKNOWN`, { name: commandName }))
 
-  const name = command.names[0].toLowerCase()
-  const category = categories.find(c => c.commands.includes(name)) || { name: `basic` }
+  const name = command.names[0]?.toLowerCase()
+  const category = categories.find(c => c.commands.includes(name!)) || { name: `basic` }
 
-  const EXTENDED = language(`${category.name}/${name}:EXTENDED`, { prefix })
+  // The 1 and 2 vars are for shortcutcreate help
+  const EXTENDED = language(`${category.name}/${name}:EXTENDED`, { prefix, 1: `{{1}}`, 2: `{{2}}` })
   const USAGE = language(`${category.name}/${name}:USAGE`, { prefix })
   const ALIASES = language(`${category.name}/${name}:ALIASES`, { prefix })
   const NO_EXTENDED = language('basic/help:NO_EXTENDED')

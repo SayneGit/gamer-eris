@@ -7,12 +7,13 @@ export default new Command([`eventshow`, `es`], async (message, args, context) =
 
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
-  const [eventID] = args
+  const [number] = args
+  const eventID = Number(number)
   if (!eventID) return message.channel.createMessage(language(`events/events:NEED_EVENT_ID`))
 
   // Get the event from this server using the id provided
   const event = await Gamer.database.models.event.findOne({
-    id: eventID,
+    eventID,
     guildID: message.guildID
   })
   if (!event) return message.channel.createMessage(language(`events/events:INVALID_EVENT`))
@@ -54,7 +55,8 @@ export default new Command([`eventshow`, `es`], async (message, args, context) =
       language(`events/eventshow:BASIC`, {
         dm: event.dmReminders ? ENABLED : DISABLED,
         allowedRoles: event.allowedRoleIDs.length ? event.allowedRoleIDs.map(id => `<@&${id}>`).join(' ') : NONE,
-        alertRoles: event.alertRoleIDs.length ? event.alertRoleIDs.map(id => `<@&${id}>`).join(' ') : NONE
+        alertRoles: event.alertRoleIDs.length ? event.alertRoleIDs.map(id => `<@&${id}>`).join(' ') : NONE,
+        remove: language(event.removeRecurringAttendees ? 'common:ENABLED' : 'common:DISABLED')
       })
     )
     .setFooter(language(`events/eventshow:STARTS_AT`))

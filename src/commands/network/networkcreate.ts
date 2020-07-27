@@ -15,18 +15,25 @@ export default new Command(`networkcreate`, async (message, _args, context) => {
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   const userSettings = await Gamer.database.models.user.findOne({ userID: message.author.id })
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 
   // If this server is already setup as a networked server cancel
-  if (guildSettings?.network.channelIDs.wall)
+  if (
+    guildSettings?.network.channelIDs.wall &&
+    message.member.guild.channels.has(guildSettings.network.channelIDs.wall)
+  )
     return message.channel.createMessage(language(`network/networkcreate:ALREADY_NETWORKED`))
   // If this user has already created his own networked server cancel
-  if (userSettings?.network.guildID) {
-    const guild = Gamer.guilds.get(userSettings.network.guildID)
-    if (guild) return message.channel.createMessage(language(`network/networkcreate:ONLY_ONE`, { guild: guild.name }))
+  if (userSettings?.networkGuildID) {
+    const guild = Gamer.guilds.get(userSettings.networkGuildID)
+    if (guild) {
+      const usersGuildSettings = await Gamer.database.models.guild.findOne({ guildID: guild.id })
+      if (usersGuildSettings?.network.channelIDs.wall && guild.channels.has(usersGuildSettings.network.channelIDs.wall))
+        return message.channel.createMessage(language(`network/networkcreate:ONLY_ONE`, { guild: guild.name }))
+    }
   }
 
   message.channel.createMessage(language(`network/networkcreate:PATIENCE`))
@@ -94,9 +101,9 @@ export default new Command(`networkcreate`, async (message, _args, context) => {
     })
 
     // Update the settings with all the new channels created
-    if (!guildSettings)
-      await Gamer.database.models.guild.create({
-        id: message.guildID,
+    if (!guildSettings) {
+      const gs = new Gamer.database.models.guild({
+        guildID: message.guildID,
         network: {
           channelIDs: {
             followers: [],
@@ -107,23 +114,25 @@ export default new Command(`networkcreate`, async (message, _args, context) => {
           }
         }
       })
-    else {
+      await gs.save()
+    } else {
       guildSettings.network.channelIDs.wall = wallChannel.id
       guildSettings.network.channelIDs.notifications = notificationsChannel.id
       guildSettings.network.channelIDs.feed = feedChannel.id
       guildSettings.network.channelIDs.photos = photosChannel.id
       guildSettings.save()
     }
-    if (!userSettings)
-      await Gamer.database.models.user.create({
+    if (!userSettings) {
+      const network = new Gamer.database.models.user({
         userID: message.author.id,
         network: {
-          followerIDs: [],
           guildID: message.guildID
-        }
+        },
+        guildIDs: [message.guildID]
       })
-    else {
-      userSettings.network.guildID = message.guildID
+      await network.save()
+    } else {
+      userSettings.networkGuildID = message.guildID
       userSettings.save()
     }
 

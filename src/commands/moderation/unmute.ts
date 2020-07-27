@@ -2,6 +2,7 @@ import { Command } from 'yuuko'
 import { MessageEmbed } from 'helperis'
 import GamerClient from '../../lib/structures/GamerClient'
 import { highestRole } from 'helperis'
+import { removeRoleFromMember } from '../../lib/utils/eris'
 
 export default new Command(`unmute`, async (message, args, context) => {
   if (!message.guildID || !message.member) return
@@ -13,7 +14,7 @@ export default new Command(`unmute`, async (message, args, context) => {
   if (!botMember?.permission.has('manageRoles'))
     return message.channel.createMessage(language(`moderation/unmute:NEED_MANAGE_ROLES`))
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   // If there is default settings the mute role won't exist
   if (!guildSettings || !guildSettings.moderation.roleIDs.mute)
     return message.channel.createMessage(language(`moderation/unmute:NEED_MUTE_ROLE`))
@@ -29,14 +30,15 @@ export default new Command(`unmute`, async (message, args, context) => {
     return message.channel.createMessage(language(`moderation/unmute:BOT_TOO_LOW`))
 
   const [userID] = args
-  args.shift()
+  if (!userID) return message.channel.createMessage(language(`moderation/unmute:NEED_USER`))
 
-  const user = (await Gamer.helpers.discord.fetchUser(Gamer, userID)) || message.mentions[0]
+  const user = await Gamer.helpers.discord.fetchUser(userID)
   if (!user) return message.channel.createMessage(language(`moderation/unmute:NEED_USER`))
 
+  args.shift()
   // If it was a valid duration then remove it from the rest of the text
   const [time] = args
-  const duration = Gamer.helpers.transform.stringToMilliseconds(time)
+  const duration = time ? Gamer.helpers.transform.stringToMilliseconds(time) : undefined
   if (duration) args.shift()
 
   const reason = args.join(` `)
@@ -54,7 +56,7 @@ export default new Command(`unmute`, async (message, args, context) => {
   if (!Gamer.helpers.discord.compareMemberPosition(message.member, member))
     return message.channel.createMessage(language(`moderation/unmute:USER_TOO_LOW`))
 
-  await member.removeRole(guildSettings.moderation.roleIDs.mute)
+  removeRoleFromMember(member, guildSettings.moderation.roleIDs.mute)
   guildSettings.moderation.users.mutedUserIDs = guildSettings.moderation.users.mutedUserIDs.filter(
     id => id !== member.id
   )

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { MessageEmbed } from 'helperis'
@@ -9,13 +8,14 @@ export default new Command([`analyze`, `analytics`], async (message, _args, cont
 
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If they are using default settings, they won't be vip server
   if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`vip/analyze:NEED_VIP`))
 
   // If the user does not have admin role quit out
-  if (!Gamer.helpers.discord.isAdmin(message, guildSettings.staff.adminRoleID)) return
+  if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings))
+    return message.channel.createMessage(language('common:NOT_MOD_OR_ADMIN'))
 
   // Alert the user that this can take time
   message.channel.createMessage(language(`vip/analyze:PATIENCE`))
@@ -80,16 +80,6 @@ export default new Command([`analyze`, `analytics`], async (message, _args, cont
       if (serverlogChannelIDs.includes(channel.id)) return false
 
       return true
-      // const everyoneRole = message.member.guild.roles.get(message.guildID)
-      // const everyoneSendPerm = everyoneRole?.permissions.has('sendMessages')
-      // const everyoneOverwrite = channel.permissionOverwrites.get(message.guildID)
-
-      // if (everyoneOverwrite && everyoneOverwrite.allow & Constants.Permissions.sendMessages) return true
-      // if (everyoneOverwrite && everyoneOverwrite.deny & Constants.Permissions.sendMessages) return false
-      // if (everyoneOverwrite && everyoneOverwrite.allow & Constants.Permissions.readMessages) return true
-      // if (everyoneOverwrite && everyoneOverwrite.deny & Constants.Permissions.readMessages) return false
-
-      // return everyoneSendPerm || false
     })
     .map(channel => channel.id)
 
@@ -134,6 +124,7 @@ export default new Command([`analyze`, `analytics`], async (message, _args, cont
       topUsers.map(id => `<@!${id}> ${userMessages.get(id)!}`).join('\n') || NONE,
       true
     )
+    .setTimestamp()
 
   return message.channel.createMessage({ content: message.author.mention, embed: embed.code })
 })

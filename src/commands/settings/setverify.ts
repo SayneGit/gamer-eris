@@ -1,26 +1,20 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command(`setverify`, async (message, args, context) => {
   if (!message.member) return
 
   const Gamer = context.client as GamerClient
-
-  let guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.guildID
-  })
-
-  const language = Gamer.getLanguage(message.guildID)
-
+  const guildSettings = await upsertGuild(message.member.guild.id)
+  const language = Gamer.getLanguage(message.member.guild.id)
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
-  if (!guildSettings) guildSettings = await Gamer.database.models.guild.create({ id: message.guildID })
-
   const helpCommand = Gamer.commandForName('help')
   if (!helpCommand) return
 
   const [action, roleIDOrName] = args
-  if (!action) return helpCommand.process(message, [`setverify`], context)
+  if (!action) return helpCommand.execute(message, [`setverify`], { ...context, commandName: 'help' })
 
   const role = message.roleMentions[0]
     ? message.member.guild.roles.get(message.roleMentions[0])
@@ -76,7 +70,7 @@ export default new Command(`setverify`, async (message, args, context) => {
         message.channel.createMessage(language(`settings/setverify:INVALID_JSON_MESSAGE`))
 
         if (!helpCommand) return
-        return helpCommand.process(message, [`embed`], context)
+        return helpCommand.execute(message, [`embed`], { ...context, commandName: 'help' })
       }
 
       guildSettings.verify.firstMessageJSON = jsonString
@@ -104,5 +98,5 @@ export default new Command(`setverify`, async (message, args, context) => {
   await message.channel.createMessage(language(`settings/setverify:INVALID_USE`))
 
   if (!helpCommand) return
-  return helpCommand.process(message, [`setverify`], context)
+  return helpCommand.execute(message, [`setverify`], { ...context, commandName: 'help' })
 })

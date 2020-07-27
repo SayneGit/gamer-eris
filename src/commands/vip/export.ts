@@ -11,9 +11,7 @@ export default new Command(`export`, async (message, args, context) => {
   const helpCommand = Gamer.commandForName(`help`)
   if (!helpCommand) return
 
-  const guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.guildID
-  })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If they are using default settings, they won't be vip server
   if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`vip/export:NEED_VIP`))
@@ -22,10 +20,10 @@ export default new Command(`export`, async (message, args, context) => {
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings.staff.adminRoleID)) return
 
   const [messageID] = args
-  if (!messageID) return helpCommand.process(message, [`export`], context)
+  if (!messageID) return helpCommand.execute(message, [`export`], { ...context, commandName: 'help' })
 
   const channel = message.channelMentions.length
-    ? message.member.guild.channels.get(message.channelMentions[0]) || message.channel
+    ? message.member.guild.channels.get(message.channelMentions[0]!) || message.channel
     : message.channel
 
   if (

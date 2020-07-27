@@ -16,37 +16,27 @@ export default class {
     const language = this.Gamer.getLanguage(member.guild.id)
 
     const userSettings = await this.Gamer.database.models.user.findOne({ userID: member.id })
-    if (!userSettings?.leveling.currency) {
+    if (!userSettings?.currency) {
       message.channel.createMessage(language(`leveling/leaderboard:NO_COINS`, { member: member.mention }))
       return
     }
 
-    const memberIDs = member.guild.members.map(m => m.id)
-
-    if (!this.Gamer.allMembersFetchedGuildIDs.has(member.guild.id)) {
-      await member.guild.fetchAllMembers()
-      this.Gamer.allMembersFetchedGuildIDs.add(member.guild.id)
-    }
-
     const [rank, nextUsers, prevUsers, topUsers] = await Promise.all([
       this.Gamer.database.models.user
-        .find({ 'leveling.currency': { $gt: userSettings.leveling.currency }, userID: { $in: memberIDs } })
+        .find({ currency: { $gt: userSettings.currency }, guildIDs: member.guild.id })
         .countDocuments(),
       this.Gamer.database.models.user
         .find({
-          'leveling.currency': { $gt: userSettings.leveling.currency },
-          userID: { $in: memberIDs }
+          currency: { $gt: userSettings.currency },
+          guildIDs: member.guild.id
         })
-        .sort('leveling.currency')
+        .sort('currency')
         .limit(1),
       this.Gamer.database.models.user
-        .find({ 'leveling.currency': { $lt: userSettings.leveling.currency }, userID: { $in: memberIDs } })
-        .sort('-leveling.currency')
+        .find({ currency: { $lt: userSettings.currency }, guildIDs: member.guild.id })
+        .sort('-currency')
         .limit(1),
-      this.Gamer.database.models.user
-        .find({ userID: { $in: memberIDs } })
-        .sort('-leveling.currency')
-        .limit(3)
+      this.Gamer.database.models.user.find({ guildIDs: member.guild.id }).sort('-currency').limit(3)
     ])
 
     const [nextUser] = nextUsers
@@ -58,9 +48,9 @@ export default class {
     }
 
     const rankText = nextUser
-      ? `${this.transformXP(nextUser.leveling.currency - userSettings.leveling.currency)} Coins Behind`
+      ? `${this.transformXP(nextUser.currency - userSettings.currency)} Coins Behind`
       : prevUser
-      ? `${this.transformXP(userSettings.leveling.currency - prevUser.leveling.currency)} Coins Ahead`
+      ? `${this.transformXP(userSettings.currency - prevUser.currency)} Coins Ahead`
       : 'Unknown'
 
     const userAvatar = await fetch(member.user.avatarURL).then(res => res.buffer())
@@ -73,12 +63,12 @@ export default class {
     // Run a loop for the top 3 users
     for (const userData of topUsers) {
       // Get the user
-      const user = await this.Gamer.helpers.discord.fetchUser(this.Gamer, userData.userID)
+      const user = await this.Gamer.helpers.discord.fetchUser(userData.userID)
       if (!user) continue
 
       topUserData.push({
         avatarUrl: user.avatarURL,
-        currentXP: userData.leveling.currency,
+        currentXP: userData.currency,
         username: user.username,
         discriminator: user.discriminator
       })
@@ -90,7 +80,7 @@ export default class {
       username,
       member.user.discriminator,
       rank + 1,
-      userSettings.leveling.currency,
+      userSettings.currency,
       rankText,
       topUserData,
       language,
@@ -102,26 +92,24 @@ export default class {
     const language = this.Gamer.getLanguage(member.guild.id)
 
     const userSettings = await this.Gamer.database.models.user.findOne({ userID: member.id })
-    if (!userSettings?.leveling.currency) {
+    if (!userSettings?.currency) {
       message.channel.createMessage(language(`leveling/leaderboard:NO_COINS`, { member: member.mention }))
       return
     }
 
     const [rank, nextUsers, prevUsers, topUsers] = await Promise.all([
-      this.Gamer.database.models.user
-        .find({ 'leveling.currency': { $gt: userSettings.leveling.currency } })
-        .countDocuments(),
+      this.Gamer.database.models.user.find({ currency: { $gt: userSettings.currency } }).countDocuments(),
       this.Gamer.database.models.user
         .find({
-          'leveling.currency': { $gt: userSettings.leveling.currency }
+          currency: { $gt: userSettings.currency }
         })
-        .sort('leveling.currency')
+        .sort('currency')
         .limit(1),
       this.Gamer.database.models.user
-        .find({ 'leveling.currency': { $lt: userSettings.leveling.currency } })
-        .sort('-leveling.currency')
+        .find({ currency: { $lt: userSettings.currency } })
+        .sort('-currency')
         .limit(1),
-      this.Gamer.database.models.user.find().sort('-leveling.currency').limit(3)
+      this.Gamer.database.models.user.find().sort('-currency').limit(3)
     ])
 
     const [nextUser] = nextUsers
@@ -133,9 +121,9 @@ export default class {
     }
 
     const rankText = nextUser
-      ? `${this.transformXP(nextUser.leveling.currency - userSettings.leveling.currency)} Coins Behind`
+      ? `${this.transformXP(nextUser.currency - userSettings.currency)} Coins Behind`
       : prevUser
-      ? `${this.transformXP(userSettings.leveling.currency - prevUser.leveling.currency)} Coins Ahead`
+      ? `${this.transformXP(userSettings.currency - prevUser.currency)} Coins Ahead`
       : 'Unknown'
 
     const userAvatar = await fetch(member.user.avatarURL).then(res => res.buffer())
@@ -148,12 +136,12 @@ export default class {
     // Run a loop for the top 3 users
     for (const userData of topUsers) {
       // Get the user
-      const user = await this.Gamer.helpers.discord.fetchUser(this.Gamer, userData.userID)
+      const user = await this.Gamer.helpers.discord.fetchUser(userData.userID)
       if (!user) continue
 
       topUserData.push({
         avatarUrl: user.avatarURL,
-        currentXP: userData.leveling.currency,
+        currentXP: userData.currency,
         username: user.username,
         discriminator: user.discriminator
       })
@@ -165,7 +153,7 @@ export default class {
       username,
       member.user.discriminator,
       rank + 1,
-      userSettings.leveling.currency,
+      userSettings.currency,
       rankText,
       topUserData,
       language,
@@ -227,7 +215,7 @@ export default class {
     // Run a loop for the top 3 users
     for (const userData of topUsers) {
       // Get the user
-      const user = await this.Gamer.helpers.discord.fetchUser(this.Gamer, userData.memberID)
+      const user = await this.Gamer.helpers.discord.fetchUser(userData.memberID)
       if (!user) continue
 
       topUserData.push({
@@ -255,24 +243,24 @@ export default class {
     const language = this.Gamer.getLanguage(member.guild.id)
 
     const userSettings = await this.Gamer.database.models.user.findOne({ userID: member.id })
-    if (!userSettings?.leveling.xp) {
+    if (!userSettings?.xp) {
       message.channel.createMessage(language(`leveling/leaderboard:NO_POINTS`, { member: member.mention }))
       return
     }
 
     const [rank, nextUsers, prevUsers, topUsers] = await Promise.all([
-      this.Gamer.database.models.user.find({ 'leveling.xp': { $gt: userSettings.leveling.xp } }).countDocuments(),
+      this.Gamer.database.models.user.find({ xp: { $gt: userSettings.xp } }).countDocuments(),
       this.Gamer.database.models.user
         .find({
-          'leveling.xp': { $gt: userSettings.leveling.xp }
+          xp: { $gt: userSettings.xp }
         })
-        .sort('leveling.xp')
+        .sort('xp')
         .limit(1),
       this.Gamer.database.models.user
-        .find({ 'leveling.xp': { $lt: userSettings.leveling.xp } })
-        .sort('-leveling.xp')
+        .find({ xp: { $lt: userSettings.xp } })
+        .sort('-xp')
         .limit(1),
-      this.Gamer.database.models.user.find().sort('-leveling.xp').limit(3)
+      this.Gamer.database.models.user.find().sort('-xp').limit(3)
     ])
 
     const [nextUser] = nextUsers
@@ -284,9 +272,9 @@ export default class {
     }
 
     const rankText = nextUser
-      ? `${this.transformXP(nextUser.leveling.xp - userSettings.leveling.xp)} EXP Behind`
+      ? `${this.transformXP(nextUser.xp - userSettings.xp)} EXP Behind`
       : prevUser
-      ? `${this.transformXP(userSettings.leveling.xp - prevUser.leveling.xp)} EXP Ahead`
+      ? `${this.transformXP(userSettings.xp - prevUser.xp)} EXP Ahead`
       : 'Unknown'
 
     const userAvatar = await fetch(member.user.avatarURL).then(res => res.buffer())
@@ -299,12 +287,12 @@ export default class {
     // Run a loop for the top 3 users
     for (const userData of topUsers) {
       // Get the user
-      const user = await this.Gamer.helpers.discord.fetchUser(this.Gamer, userData.userID)
+      const user = await this.Gamer.helpers.discord.fetchUser(userData.userID)
       if (!user) continue
 
       topUserData.push({
         avatarUrl: user.avatarURL,
-        currentXP: userData.leveling.xp,
+        currentXP: userData.xp,
         username: user.username,
         discriminator: user.discriminator
       })
@@ -316,7 +304,7 @@ export default class {
       username,
       member.user.discriminator,
       rank + 1,
-      userSettings.leveling.xp,
+      userSettings.xp,
       rankText,
       topUserData,
       language
@@ -381,7 +369,7 @@ export default class {
     // Run a loop for the top 3 users
     for (const userData of topUsers) {
       // Get the user
-      const user = await this.Gamer.helpers.discord.fetchUser(this.Gamer, userData.memberID)
+      const user = await this.Gamer.helpers.discord.fetchUser(userData.memberID)
       if (!user) continue
 
       topUserData.push({
@@ -485,7 +473,7 @@ export default class {
 
       const currentLevel =
         constants.levels.find(level => level.xpNeeded > userData.currentXP) ||
-        constants.levels[constants.levels.length - 1]
+        constants.levels[constants.levels.length - 1]!
       canvas
         .setColor(`#46a3ff`)
         .setTextFont(`18px SFTMedium`)

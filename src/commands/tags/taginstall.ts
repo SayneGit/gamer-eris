@@ -1,34 +1,26 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
-interface TagModules {
-  aov: string
-  [key: string]: string | undefined
-}
-
-const modules: TagModules = {
-  aov: '293208951473045504'
-}
+const modules = new Map<string, string>().set('aov', '293208951473045504')
 
 export default new Command([`taginstall`], async (message, args, context) => {
+  if (!message.guildID) return
+
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName('help')
   if (!helpCommand) return
 
   const language = Gamer.getLanguage(message.guildID)
-  if (!args.length) return helpCommand.process(message, [`taginstall`], context)
-
-  const guildSettings =
-    (await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })) || (await Gamer.database.models.guild.create({ id: message.guildID }))
+  const [module] = args
+  if (!module) return helpCommand.execute(message, [`taginstall`], { ...context, commandName: 'help' })
 
   // If the user is not an admin cancel out
+  const guildSettings = await upsertGuild(message.guildID)
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings.staff.adminRoleID)) return
 
   // Check the module and convert it to a server id
-  const [module] = args
-  const serverID = modules[module] || module
+  const serverID = modules.get(module) || module
 
   guildSettings.modules.push(serverID)
   guildSettings.save()

@@ -8,9 +8,8 @@ export default new Command([`user`, `userinfo`, `ui`, `whois`], async (message, 
   const Gamer = context.client as GamerClient
 
   const [id] = args
-  const user = message.mentions.length
-    ? message.mentions[0]
-    : (await Gamer.helpers.discord.fetchUser(Gamer, id)) || message.author
+  const user =
+    message.mentions[0] || (id ? (await Gamer.helpers.discord.fetchUser(id)) || message.author : message.author)
 
   const userSettings = await Gamer.database.models.user.findOne({ userID: user.id })
   const language = Gamer.getLanguage(message.guildID)
@@ -20,6 +19,15 @@ export default new Command([`user`, `userinfo`, `ui`, `whois`], async (message, 
 
   const buffer = await Gamer.helpers.profiles.makeCanvas(message, member || message.member, Gamer)
   if (!buffer) return
+
+  const activity = await Gamer.database.models.analytics
+    .find({
+      userID: user.id,
+      guildID: message.member.guild.id,
+      type: 'MESSAGE_CREATE'
+    })
+    .sort('-timestamp')
+    .limit(1)
 
   const fileName = `${member.id}.png`
 
@@ -35,9 +43,9 @@ export default new Command([`user`, `userinfo`, `ui`, `whois`], async (message, 
     guildDate: new Date(member.joinedAt).toISOString().substr(0, 10)
   })
   const SETTINGS_VALUE = language(`basic/user:SETTINGS_VALUES`, {
-    afk: userSettings ? userSettings.afk.enabled : false,
+    afk: userSettings ? userSettings.afkEnabled : false,
     afkMessage: userSettings
-      ? userSettings.afk.message
+      ? userSettings.afkMessage
       : `Hi 👋, I am AFK at the moment. I will get back to you as soon as possible. 😄`
   })
 
@@ -55,8 +63,20 @@ export default new Command([`user`, `userinfo`, `ui`, `whois`], async (message, 
     .setDescription(`${nickname}${userID}`)
     .addField(language(`basic/user:JOINED`), JOINED_VALUE)
     .addField(language(`basic/user:SETTINGS`), SETTINGS_VALUE)
-    .addField(language(`basic/user:PERMISSIONS`), permOverview.sort().join(`, `))
+    .addField(
+      language(`basic/user:PERMISSIONS`),
+      permOverview.includes('Administrator') ? 'Administrator' : permOverview.sort().join(`, `)
+    )
     .attachFile(buffer, fileName)
+
+  const [action] = activity
+  if (action) {
+    embed.setFooter(
+      language('basic/user:LAST_ACTIVE', {
+        time: Gamer.helpers.transform.humanizeMilliseconds(Date.now() - action.timestamp) || language('basic/user:NOW')
+      })
+    )
+  }
 
   if (roles) embed.addField(language(`basic/user:ROLES`), roles)
 

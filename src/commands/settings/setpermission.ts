@@ -8,13 +8,14 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
   const language = Gamer.getLanguage(message.guildID)
   const helpCommand = Gamer.commandForName('help')
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 
   const [commandName, type, ...targets] = args
-  if (!commandName || !type) return helpCommand?.process(message, [`setpermission`], context)
+  if (!commandName || !type)
+    return helpCommand?.execute(message, [`setpermission`], { ...context, commandName: 'help' })
 
   const ON = language(`common:ON`).toLowerCase()
   const OFF = language(`common:OFF`).toLowerCase()
@@ -22,7 +23,7 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
   const DISABLED = language(`common:DISABLED`).toLowerCase()
 
   if (![`on`, `off`, ON, OFF, ENABLED, DISABLED].includes(type.toLowerCase()))
-    return helpCommand?.process(message, [`setpermission`], context)
+    return helpCommand?.execute(message, [`setpermission`], { ...context, commandName: 'help' })
 
   const enable = [`on`, ON, ENABLED].includes(type.toLowerCase())
   const roleID = targets.join(' ')
@@ -49,7 +50,8 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
         exceptionRoleIDs: roleIDs
       }
 
-      const newPerms = await Gamer.database.models.command.create(payload)
+      const newPerms = new Gamer.database.models.command(payload)
+      await newPerms.save()
       return Gamer.guildCommandPermissions.set(`${message.guildID}.allcommands`, newPerms)
     }
 
@@ -152,7 +154,7 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
 
   // A specific command was provided
   const command = Gamer.commandForName(commandName)
-  if (!command) return helpCommand?.process(message, [`setpermission`], context)
+  if (!command) return helpCommand?.execute(message, [`setpermission`], { ...context, commandName: 'help' })
 
   const [name] = command.names
 
@@ -166,7 +168,7 @@ export default new Command([`setpermission`, `setignore`, `setperm`], async (mes
     message.channel.createMessage(language(`settings/setpermission:COMMAND_UPDATED`))
 
     const newPerms = await Gamer.database.models.command.create({
-      name: command.names[0],
+      name: command.names[0]!,
       guildID: message.guildID,
       enabled: enable,
       exceptionChannelIDs: targets.length ? [...channelIDs] : [],

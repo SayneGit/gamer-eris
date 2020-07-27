@@ -6,7 +6,7 @@ export default new Command([`modlog`, `ml`], async (message, args, context) => {
   if (!message.member) return
 
   const Gamer = context.client as GamerClient
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [userID, caseID] = args
@@ -27,7 +27,7 @@ export default new Command([`modlog`, `ml`], async (message, args, context) => {
   const user = message.mentions.length
     ? message.mentions[0]
     : userID
-    ? await Gamer.helpers.discord.fetchUser(Gamer, userID)
+    ? await Gamer.helpers.discord.fetchUser(userID)
     : message.author
 
   const modlogs = await Gamer.database.models.modlog.find({
@@ -40,25 +40,18 @@ export default new Command([`modlog`, `ml`], async (message, args, context) => {
     )
   // Sort modlogs by latest modlog as first in the array
   const sortedModLogs = modlogs.sort((a, b) => b.id - a.id)
-  const modlogTypes = {
-    ban: 0,
-    unban: 0,
-    mute: 0,
-    unmute: 0,
-    warn: 0,
-    kick: 0
-  }
+  const modlogTypes = [
+    { type: `Ban`, amount: modlogs.filter(log => log.action === `ban`).length },
+    { type: `Unban`, amount: modlogs.filter(log => log.action === `unban`).length },
+    { type: `Mute`, amount: modlogs.filter(log => log.action === `mute`).length },
+    { type: `Unmute`, amount: modlogs.filter(log => log.action === `unmute`).length },
+    { type: `Warn`, amount: modlogs.filter(log => log.action === `warn`).length },
+    { type: `Kick`, amount: modlogs.filter(log => log.action === `kick`).length },
+    { type: `Note`, amount: modlogs.filter(log => log.action === `note`).length }
+  ]
 
-  for (const log of sortedModLogs) {
-    if (modlogTypes[log.action]) modlogTypes[log.action] += 1
-    else modlogTypes[log.action] = 1
-  }
-
-  const description = Object.entries(modlogTypes).map(([key, value]) =>
-    language(`moderation/modlog:DETAILS`, {
-      type: Gamer.helpers.transform.toTitleCase(key),
-      amount: value
-    })
+  const description = modlogTypes.map(log =>
+    language(`moderation/modlog:DETAILS`, { type: log.type, amount: log.amount })
   )
 
   const embed = new MessageEmbed()

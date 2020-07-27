@@ -21,7 +21,7 @@ export default new Command(`embedshow`, async (message, args, context) => {
   const [embed] = messageToUse.embeds
   if (!embed) return
 
-  const settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isModOrAdmin(message, settings)) return
@@ -29,10 +29,13 @@ export default new Command(`embedshow`, async (message, args, context) => {
   const payload: string[] = []
   const fields =
     embed.fields && embed.fields.length
-      ? embed.fields.map(field => `{ "name": "${field.name}", "value": "${field.value}", "inline": ${field.inline}}`)
+      ? embed.fields.map(
+          field =>
+            `{ "name": "${field.name}", "value": "${field.value.split('\n').join('\\n')}", "inline": ${field.inline}}`
+        )
       : []
   if (embed.title) payload.push(`"title": "${embed.title}"`)
-  if (embed.description) payload.push(`"description": "${embed.description}"`)
+  if (embed.description) payload.push(`"description": "${embed.description.split('\n').join('\\n')}"`)
   if (embed.color) payload.push(`"color": ${embed.color}`)
   if (embed.author) {
     let author = `"author": { "name": "${embed.author.name}"`

@@ -4,10 +4,10 @@ import GamerClient from '../lib/structures/GamerClient'
 import { MessageEmbed } from 'helperis'
 import constants from '../constants'
 import nodefetch from 'node-fetch'
+import { DiscordPermission } from '../lib/utils/discord'
 
 const postReactions = [constants.emojis.heart, constants.emojis.repeat, constants.emojis.plus]
-const postPermissions = [
-  'readMessages',
+const postPermissions: DiscordPermission[] = [
   'addReactions',
   'embedLinks',
   'sendMessages',
@@ -24,15 +24,15 @@ export default class extends Monitor {
     // Only server admins can post in the wall channels
     if (!message.member.permission.has('administrator')) return
 
-    const guildSettings = await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })
+    const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
     // Either the guild doesnt have custom settings or the wall channel wasnt setup or this isnt in the wall channel
     if (!guildSettings?.network.channelIDs.wall || guildSettings.network.channelIDs.wall !== message.channel.id) return
 
-    const buffer = message.attachments.length
-      ? await nodefetch(message.attachments[0].url)
+    const [attachment] = message.attachments
+
+    const buffer = attachment
+      ? await nodefetch(attachment.url)
           .then(res => res.buffer())
           .catch(() => undefined)
       : undefined
@@ -43,7 +43,7 @@ export default class extends Monitor {
       .setDescription(message.content)
       .setFooter(message.author.id)
       .setTimestamp()
-    if (buffer) embed.attachFile(buffer, `imagepost.${message.attachments[0].url.endsWith('.gif') ? 'gif' : 'png'}`)
+    if (buffer) embed.attachFile(buffer, `imagepost.${attachment?.url.endsWith('.gif') ? 'gif' : 'png'}`)
 
     try {
       // Send the message the user posted as an embed

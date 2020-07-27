@@ -1,6 +1,7 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { highestRole } from 'helperis'
+import { addRoleToMember } from '../../lib/utils/eris'
 
 export default new Command([`roletoall`, `oprahrole`], async (message, args, context) => {
   if (!message.member || !message.guildID) return
@@ -13,9 +14,7 @@ export default new Command([`roletoall`, `oprahrole`], async (message, args, con
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.guildID
-  })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If they are using default settings, they won't be vip server
   if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`vip/roletoall:NEED_VIP`))
@@ -28,7 +27,7 @@ export default new Command([`roletoall`, `oprahrole`], async (message, args, con
 
   const role = message.roleMentions.length
     ? // If a role was mentioned use it
-      message.member.guild.roles.get(message.roleMentions[0])
+      message.member.guild.roles.get(message.roleMentions[0]!)
     : // ELse if a role id or name was provided
     roleIDOrName
     ? // Check if its a valid role id
@@ -48,14 +47,14 @@ export default new Command([`roletoall`, `oprahrole`], async (message, args, con
 
   const REASON = language(`vip/roletoall:REASON`, { user: message.author.username })
 
-  message.channel.createMessage(
-    language(`vip/roletoall:PATIENCE`, { amount: message.member.guild.members.size, mention: message.author.mention })
-  )
-
   if (!Gamer.allMembersFetchedGuildIDs.has(message.member.guild.id)) {
     await message.member.guild.fetchAllMembers()
     Gamer.allMembersFetchedGuildIDs.add(message.member.guild.id)
   }
+
+  message.channel.createMessage(
+    language(`vip/roletoall:PATIENCE`, { amount: message.member.guild.members.size, mention: message.author.mention })
+  )
 
   // Create a counter that will help us rate limit the amount of members we are editing
   // Otherwise all role commands like .role .mute .verify stuff would not work until this finished
@@ -75,7 +74,7 @@ export default new Command([`roletoall`, `oprahrole`], async (message, args, con
     // Increment the counter
     counter++
     // Need this await to make the loop async so that if a user deletes a role it will break in the check above
-    await member.addRole(role.id, REASON).catch(() => undefined)
+    await addRoleToMember(member, role.id, REASON)
 
     Gamer.amplitude.push({
       authorID: message.author.id,

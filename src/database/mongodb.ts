@@ -3,7 +3,7 @@ import AnalyticSchema, { GamerAnalytic } from './schemas/analytics'
 import ClientSchema, { ClientSettings } from './schemas/client'
 import CommandSchema, { GamerCommandPermission } from './schemas/command'
 import EmojiSchema from './schemas/emoji'
-import EventSchema from './schemas/event'
+import EventSchema, { GamerEvent } from './schemas/event'
 import FeedbackSchema, { GamerFeedback } from './schemas/feedback'
 import GuildSchema from './schemas/guild'
 import LabelSchema from './schemas/label'
@@ -15,18 +15,21 @@ import MemberSchema from './schemas/member'
 import MirrorSchema, { GamerMirror } from './schemas/mirrors'
 import MissionSchema from './schemas/mission'
 import ModlogSchema from './schemas/modlog'
+import PollSchema, { GamerPoll } from './schemas/poll'
 import ReactionRoleSchema from './schemas/reactionrole'
 import ReminderSchema, { GamerReminder } from './schemas/reminder'
 import RolesetSchema from './schemas/roleset'
+import RolesSchema, { GamerRole } from './schemas/roles'
 import RoleMessageSchema, { GamerRoleMessage } from './schemas/rolemessage'
 import ShortcutSchema, { GamerShortcut } from './schemas/shortcut'
+import SpySchema, { GamerSpy } from './schemas/spy'
 import SubscriptionSchema, { GamerSubscription } from './schemas/subscription'
 import SurveySchema, { GamerSurvey } from './schemas/survey'
 import TagSchema from './schemas/tag'
 import TradingCardSchema from './schemas/tradingCard'
 import UpvoteSchema from './schemas/upvote'
-import UserSchema from './schemas/user'
-import { GuildSettings, UserSettings, MemberSettings } from '../lib/types/settings'
+import UserSchema, { UserSettings } from './schemas/user'
+import { GuildSettings, MemberSettings } from '../lib/types/settings'
 
 import config from '../../config'
 import { GamerEmoji } from '../lib/types/database'
@@ -36,7 +39,6 @@ import {
   GamerTag,
   GamerTradingCard,
   GamerReactionRole,
-  GamerEvent,
   GamerRoleset,
   GamerModlog,
   GamerLevel,
@@ -66,11 +68,14 @@ class Database {
     mirror: mongoose.model<GamerMirror>('Mirror', MirrorSchema),
     mission: mongoose.model<GamerMission>('Mission', MissionSchema),
     modlog: mongoose.model<GamerModlog>('Modlog', ModlogSchema),
+    poll: mongoose.model<GamerPoll>('Poll', PollSchema),
     reactionRole: mongoose.model<GamerReactionRole>('ReactionRole', ReactionRoleSchema),
     reminder: mongoose.model<GamerReminder>('Reminder', ReminderSchema),
     roleMessages: mongoose.model<GamerRoleMessage>('RoleMessage', RoleMessageSchema),
+    roles: mongoose.model<GamerRole>('Roles', RolesSchema),
     roleset: mongoose.model<GamerRoleset>('Roleset', RolesetSchema),
     shortcut: mongoose.model<GamerShortcut>('Shortcut', ShortcutSchema),
+    spy: mongoose.model<GamerSpy>('Spy', SpySchema),
     subscription: mongoose.model<GamerSubscription>('Subscription', SubscriptionSchema),
     survey: mongoose.model<GamerSurvey>('Survey', SurveySchema),
     tag: mongoose.model<GamerTag>('Tag', TagSchema),

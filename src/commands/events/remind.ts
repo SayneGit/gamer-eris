@@ -9,7 +9,7 @@ export default new Command(
     const Gamer = context.client as GamerClient
 
     const helpCommand = Gamer.commandForName('help')
-    if (!args.length) return helpCommand?.process(message, ['remind'], context)
+    if (!args.length) return helpCommand?.execute(message, ['remind'], { ...context, commandName: 'help' })
 
     const language = Gamer.getLanguage(message.guildID)
 
@@ -21,7 +21,7 @@ export default new Command(
         reminders
           .map(
             reminder =>
-              `**${reminder.id}: ${Gamer.helpers.transform.humanizeMilliseconds(
+              `**${reminder.reminderID}: ${Gamer.helpers.transform.humanizeMilliseconds(
                 reminder.timestamp - Date.now()
               )}** => ${reminder.content}`
           )
@@ -29,26 +29,26 @@ export default new Command(
       )
     }
 
-    const startNow = Gamer.helpers.transform.stringToMilliseconds(time)
-    if (!startNow) return helpCommand?.process(message, ['remind'], context)
+    const startNow = time ? Gamer.helpers.transform.stringToMilliseconds(time) : undefined
+    if (!startNow) return helpCommand?.execute(message, ['remind'], { ...context, commandName: 'help' })
 
     // Removes the time from the args leaving only the description
     args.shift()
-    if (!args.length) return helpCommand?.process(message, ['remind'], context)
+    if (!args.length) return helpCommand?.execute(message, ['remind'], { ...context, commandName: 'help' })
 
     const [repeat] = args
     let recurring = false
-    const interval = Gamer.helpers.transform.stringToMilliseconds(repeat)
+    const interval = repeat ? Gamer.helpers.transform.stringToMilliseconds(repeat) : undefined
     if (interval) {
       recurring = true
       args.shift()
-      if (!args.length) return helpCommand?.process(message, ['remind'], context)
+      if (!args.length) return helpCommand?.execute(message, ['remind'], { ...context, commandName: 'help' })
     }
 
     message.channel.createMessage(language('events/remind:CREATED', { mention: message.author.mention }))
 
-    Gamer.database.models.reminder.create({
-      id: message.id,
+    return Gamer.database.models.reminder.create({
+      reminderID: message.id,
       guildID: message.guildID,
       channelID: message.channel.id,
       userID: message.author.id,

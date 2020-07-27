@@ -73,7 +73,6 @@ export default class {
       ].join('\n'),
       author: {
         name: language('settings/setverify:AMAZING'),
-        // eslint-disable-next-line @typescript-eslint/camelcase
         icon_url: 'https://i.imgur.com/0LxU5Yy.jpg'
       },
       image: 'https://i.imgur.com/oN4YjaY.gif'
@@ -291,8 +290,8 @@ export default class {
   }
 
   async createReactionRoleColors(message: Message) {
-    const language = this.Gamer.getLanguage(message.guildID)
     const member = message.member
+    const language = this.Gamer.getLanguage(member?.guild.id)
     if (!member || member.guild.roles.size + 20 > 250)
       return message.channel.createMessage(language(`roles/reactionrolecreate:MAX_ROLES`))
 
@@ -308,16 +307,17 @@ export default class {
 
     const reactionRole = await this.Gamer.database.models.reactionRole.findOne({
       name: 'colors',
-      guildID: message.guildID
+      guildID: member?.guild.id
     })
 
-    if (reactionRole) return message.channel.createMessage(language(`roles/reactionrolecreate:NAME_EXISTS`, { name }))
+    if (reactionRole)
+      return message.channel.createMessage(language(`roles/reactionrolecreate:NAME_EXISTS`, { name: 'colors' }))
 
     const exists = await this.Gamer.database.models.roleset.findOne({
       name: 'colors',
-      guildID: message.guildID
+      guildID: member?.guild.id
     })
-    if (exists) return message.channel.createMessage(language(`roles/rolesetcreate:EXISTS`, { name }))
+    if (exists) return message.channel.createMessage(language(`roles/rolesetcreate:EXISTS`, { name: 'colors' }))
 
     // Create all 20 roles
 
@@ -342,12 +342,12 @@ export default class {
     this.Gamer.database.models.reactionRole.create({
       name: 'colors',
       reactions: roles.map((role, index) => ({
-        reaction: this.Gamer.helpers.discord.convertEmoji(reactionRoleData[index].emoji, `reaction`),
+        reaction: this.Gamer.helpers.discord.convertEmoji(reactionRoleData[index]!.emoji, `reaction`)!,
         roleIDs: [role.id]
       })),
       messageID: baseMessage.id,
       channelID: baseMessage.channel.id,
-      guildID: message.guildID,
+      guildID: member?.guild.id,
       authorID: message.author.id
     })
 
@@ -355,7 +355,7 @@ export default class {
     await this.Gamer.database.models.roleset.create({
       name: 'colors',
       roleIDs: roles.map(role => role.id),
-      guildID: message.guildID
+      guildID: member?.guild.id
     })
 
     // Create all 20 reactions

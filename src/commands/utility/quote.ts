@@ -13,19 +13,20 @@ export default new Command(`quote`, async (message, args, context) => {
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const [messageID] = args
-  if (!messageID) return helpCommand.process(message, [`quote`], context)
+  const [messageID, channelID] = args
+  if (!messageID) return helpCommand.execute(message, [`quote`], { ...context, commandName: 'help' })
 
-  const [channelID] = message.channelMentions
-
-  const channel = channelID ? message.member.guild.channels.get(channelID) : message.channel
+  const channel =
+    channelID || message.channelMentions.length
+      ? message.member.guild.channels.get(channelID || message.channelMentions[0]!)
+      : message.channel
   if (!channel || !(channel instanceof TextChannel)) return
 
   const botPerms = channel.permissionsOf(Gamer.user.id)
   if (!botPerms.has('readMessages') || !botPerms.has('readMessageHistory')) return
 
   const quotedMessage = channel.messages.get(messageID) || (await channel.getMessage(messageID).catch(() => undefined))
-  if (!quotedMessage) return helpCommand.process(message, [`quote`], context)
+  if (!quotedMessage) return helpCommand.execute(message, [`quote`], { ...context, commandName: 'help' })
 
   const quotedMessageEmbed = quotedMessage.embeds && quotedMessage.embeds.length && quotedMessage.embeds[0]
 
@@ -41,8 +42,9 @@ export default new Command(`quote`, async (message, args, context) => {
         quotedMessageEmbed ? language(`utility/quote:EMBED`) : quotedMessage.content
       ].join('\n')
     )
-    .setFooter(channel ? channel.name : ``)
-  if (quotedMessage.attachments.length) embed.setImage(quotedMessage.attachments[0].url)
+    .setFooter(channel ? `#${channel.name}` : ``)
+  const [attachment] = quotedMessage.attachments
+  if (attachment) embed.setImage(attachment.url)
 
   return message.channel.createMessage({ embed: embed.code })
 })

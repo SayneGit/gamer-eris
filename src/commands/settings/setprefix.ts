@@ -1,14 +1,12 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command(`setprefix`, async (message, args, context) => {
   if (!message.guildID) return
 
   const Gamer = context.client as GamerClient
-  const guildSettings =
-    (await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })) || (await Gamer.database.models.guild.create({ id: message.guildID }))
+  const guildSettings = await upsertGuild(message.guildID)
 
   const language = Gamer.getLanguage(message.guildID)
 
@@ -21,7 +19,8 @@ export default new Command(`setprefix`, async (message, args, context) => {
   guildSettings.prefix = prefix ? prefix.substring(0, 2) : Gamer.prefix
   guildSettings.save()
 
-  Gamer.guildPrefixes.set(message.guildID, prefix)
+  if (prefix) Gamer.guildPrefixes.set(message.guildID, prefix)
+  else Gamer.guildPrefixes.delete(message.guildID)
 
   return message.channel.createMessage(language(prefix ? `settings/setprefix:UPDATED` : `settings/setprefix:RESET`))
 })

@@ -41,12 +41,87 @@ export default {
     clanText: `#fff`,
     clanURL: `#fff`
   },
+  orangeMode: {
+    username: `#000`,
+    discriminator: `#000`,
+    userdivider: `#dadada`,
+    xpbarText: `#000`,
+    xpbarRatioUp: `#000`,
+    xpbarRatioDown: `#000`,
+    badgeShadow: `rgba(100,100,100,.7)`,
+    badgeFilling: `#5d5d5d`,
+    xpbarFilling: `#5d5d5d`,
+    clanRectFilling: `rgba(54,54,54,.7)`,
+    clanName: `#8bccef`,
+    clanText: `#fff`,
+    clanURL: `#fff`
+  },
+  redMode: {
+    username: `#fff`,
+    discriminator: `#fff`,
+    userdivider: `#dadada`,
+    xpbarText: `#fff`,
+    xpbarRatioUp: `#000`,
+    xpbarRatioDown: `#000`,
+    badgeShadow: `rgba(100,100,100,.7)`,
+    badgeFilling: `#5d5d5d`,
+    xpbarFilling: `#5d5d5d`,
+    clanRectFilling: `rgba(54,54,54,.7)`,
+    clanName: `#8bccef`,
+    clanText: `#fff`,
+    clanURL: `#fff`
+  },
+  greenMode: {
+    username: `#fff`,
+    discriminator: `#fff`,
+    userdivider: `#dadada`,
+    xpbarText: `#fff`,
+    xpbarRatioUp: `#000`,
+    xpbarRatioDown: `#000`,
+    badgeShadow: `rgba(100,100,100,.7)`,
+    badgeFilling: `#5D5D5D`,
+    xpbarFilling: `#5D5D5D`,
+    clanRectFilling: `rgba(54,54,54,.7)`,
+    clanName: `#8bccef`,
+    clanText: `#fff`,
+    clanURL: `#fff`
+  },
+  purpleMode: {
+    username: `#fff`,
+    discriminator: `#fff`,
+    userdivider: `#dadada`,
+    xpbarText: `#fff`,
+    xpbarRatioUp: `#000`,
+    xpbarRatioDown: `#000`,
+    badgeShadow: `rgba(100,100,100,.7)`,
+    badgeFilling: `#5D5D5D`,
+    xpbarFilling: `#5D5D5D`,
+    clanRectFilling: `rgba(54,54,54,.7)`,
+    clanName: `#8bccef`,
+    clanText: `#fff`,
+    clanURL: `#fff`
+  },
+  blueMode: {
+    username: `#fff`,
+    discriminator: `#fff`,
+    userdivider: `#dadada`,
+    xpbarText: `#fff`,
+    xpbarRatioUp: `#000`,
+    xpbarRatioDown: `#000`,
+    badgeShadow: `rgba(100,100,100,.7)`,
+    badgeFilling: `#5D5D5D`,
+    xpbarFilling: `#5D5D5D`,
+    clanRectFilling: `rgba(54,54,54,.7)`,
+    clanName: `#8bccef`,
+    clanText: `#fff`,
+    clanURL: `#fff`
+  },
   defaultBackground: `Shop Titans`,
   backgrounds: [
     {
       id: 1,
-      name: `Shop Titans`,
-      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/shoptitans.jpg`)),
+      name: `Animecat`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/animecat.png`)),
       vipNeeded: false
     },
     {
@@ -81,9 +156,93 @@ export default {
     },
     {
       id: 7,
-      name: `ATS - Submitted By BeardCaliper
-      #1897`,
-      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/ats.jpg`))
+      name: `ATS - Submitted By BeardCaliper#1897`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/ats.jpg`)),
+      vipNeeded: false
+    },
+    {
+      id: 8,
+      name: `Dicey Cafe - Submitted By Derk#0127`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/diceycafe.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 9,
+      name: `Control`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/control.jpg`)),
+      vipNeeded: false
+    },
+    {
+      id: 10,
+      name: `Ark Survival Evolved - Submitted By Aikage#4444`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/ark.jpg`)),
+      vipNeeded: false
+    },
+    {
+      id: 11,
+      name: `PlayerUnknown's Battlegrounds - Submitted By GeheimerWolf#8008`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/pubg.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 12,
+      name: `Shop Titans`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/shoptitans.jpg`)),
+      vipNeeded: false
+    },
+    {
+      id: 13,
+      name: `Minecraft - Submitted By Aikage#4444`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/minecraft.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 14,
+      name: `CodeVein - Submitted By Aikage#4444`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/CodeVein.jpg`)),
+      vipNeeded: false
+    },
+    {
+      id: 15,
+      name: `Final-Fantasy-VII - Submitted By Aikage#4444`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/Final-Fantasy-VII.jpg`)),
+      vipNeeded: false
+    },
+    {
+      id: 16,
+      name: `Something - Submitted By Aikage#4444`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/something.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 17,
+      name: `Overwatch - Submitted By GeheimerWolf#8008`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/Overwatch.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 18,
+      name: `ApexLegends`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/apex.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 19,
+      name: `Wolf`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/wolf.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 20,
+      name: `Fortnite`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/fortnite.png`)),
+      vipNeeded: false
+    },
+    {
+      id: 21,
+      name: `SadAnimeGirly - Submitted By GeheimerWolf#8008`,
+      buffer: fs.readFileSync(join(assetsFolder, `profile/Backgrounds/SadAnimeGirly.png`)),
+      vipNeeded: false
     }
   ],
   backgroundPackages: [],

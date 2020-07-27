@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 export default new mongoose.Schema({
   // The guild id will help make each document be unique
-  id: { type: String, required: true, index: true },
+  guildID: { type: String, required: true, index: true },
   // The language that should be used for the server
   language: { type: String, default: `en-US` },
   // How many minutes to wait for a response from a user. ONLY VIP GUILDS CAN MODIFY.
@@ -69,6 +69,7 @@ export default new mongoose.Schema({
   modules: { type: [String], lowercase: true },
   disableTenor: Boolean,
   moderation: {
+    reassignRolesOnJoin: Boolean,
     roleIDs: {
       // The role to be automatically assigned once the user finished verifying.
       autorole: String,
@@ -225,6 +226,8 @@ export default new mongoose.Schema({
   xp: {
     // The max amount of days u can be inactive on a server before losing XP
     inactiveDaysAllowed: { type: Number, default: 0 },
+    // The percentage of xp to be removed when user is marked inactive
+    inactivePercentage: { type: Number, default: 1 },
     // The amount of xp to grant per message
     perMessage: Number,
     // The amount of xp to grant per minute in voice

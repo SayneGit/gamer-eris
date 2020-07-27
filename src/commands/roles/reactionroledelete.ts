@@ -9,9 +9,7 @@ export default new Command([`reactionroledelete`, `rrd`], async (message, args, 
   const helpCommand = Gamer.commandForName('help')
   if (!helpCommand) return
 
-  const guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.guildID
-  })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   const language = Gamer.getLanguage(message.guildID)
 
@@ -19,7 +17,7 @@ export default new Command([`reactionroledelete`, `rrd`], async (message, args, 
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 
   const [name] = args
-  if (!name) return helpCommand.process(message, [`reactionroledelete`], context)
+  if (!name) return helpCommand.execute(message, [`reactionroledelete`], { ...context, commandName: 'help' })
 
   const reactionRole = await Gamer.database.models.reactionRole.findOne({
     name: name.toLowerCase(),

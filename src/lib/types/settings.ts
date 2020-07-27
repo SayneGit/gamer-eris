@@ -1,47 +1,5 @@
 import mongoose from 'mongoose'
 
-export interface UserSettings extends mongoose.Document {
-  id: string
-  userID: string
-  profile: {
-    backgroundID: number
-    theme: string
-  }
-  afk: {
-    enabled: boolean
-    message: string
-  }
-  moderationNetworkEnabled: boolean
-  vip: {
-    isVIP: boolean
-    guildsRegistered: string[]
-    openTickets: number
-  }
-  leveling: {
-    boosts: Boost[]
-    xp: number
-    level: number
-    currency: number
-    backgrounds: number[]
-    badges: {
-      bought: number[]
-      equipped: number[]
-    }
-    badgesUnlocked: number
-  }
-  network: {
-    guildID?: string
-  }
-}
-
-export interface Boost {
-  name: string
-  timestamp?: number
-  multiplier: number
-  active: boolean
-  activatedAt?: number
-}
-
 export interface MemberSettings extends mongoose.Document {
   id: string
   guildID: string
@@ -58,7 +16,7 @@ export interface MemberSettings extends mongoose.Document {
 }
 
 export interface GuildSettings extends mongoose.Document {
-  id: string
+  guildID: string
   language: string
   menutime: number
   prefix: string
@@ -98,6 +56,7 @@ export interface GuildSettings extends mongoose.Document {
   modules: string[]
   disableTenor: boolean
   moderation: {
+    reassignRolesOnJoin: boolean
     roleIDs: {
       autorole?: string
       public: string[]
@@ -210,6 +169,7 @@ export interface GuildSettings extends mongoose.Document {
   }
   xp: {
     inactiveDaysAllowed: number
+    inactivePercentage: number
     perMessage?: number
     perMinuteVoice?: number
     prizes: {

@@ -14,14 +14,15 @@ export default new Command([`kick`, `k`], async (message, args, context) => {
     return message.channel.createMessage(language(`moderation/kick:NEED_KICK_PERMS`))
 
   const [userID, ...text] = args
+  if (!userID) return message.channel.createMessage(language(`moderation/kick:NEED_USER`))
 
-  const user = (await Gamer.helpers.discord.fetchUser(Gamer, userID)) || message.mentions[0]
+  const user = await Gamer.helpers.discord.fetchUser(userID)
   if (!user) return message.channel.createMessage(language(`moderation/kick:NEED_USER`))
 
   const reason = text.join(` `)
   if (!reason) return message.channel.createMessage(language(`moderation/kick:NEED_REASON`))
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const member = await Gamer.helpers.discord.fetchMember(message.member.guild, user.id)

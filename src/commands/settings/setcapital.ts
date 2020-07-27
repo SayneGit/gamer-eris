@@ -1,11 +1,12 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command(`setcapital`, async (message, args, context) => {
   if (!message.guildID) return
 
   const Gamer = context.client as GamerClient
-  let settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await upsertGuild(message.guildID)
   const language = Gamer.getLanguage(message.guildID)
 
   // If the user does not have a modrole or admin role quit out
@@ -15,8 +16,7 @@ export default new Command(`setcapital`, async (message, args, context) => {
   const helpCommand = Gamer.commandForName(`help`)
   if (!helpCommand) return
 
-  if (!type) return helpCommand.process(message, [`setcapital`], context)
-  if (!settings) settings = await Gamer.database.models.guild.create({ id: message.guildID })
+  if (!type) return helpCommand.execute(message, [`setcapital`], { ...context, commandName: 'help' })
 
   switch (type.toLowerCase()) {
     case `disable`:

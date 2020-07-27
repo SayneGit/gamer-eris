@@ -6,23 +6,23 @@ export default new Command([`shortcutcreate`, `scc`], async (message, args, cont
 
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName('help')
-  if (!args.length) return helpCommand?.process(message, [`shortcutcreate`], context)
+  if (!args.length) return helpCommand?.execute(message, [`shortcutcreate`], { ...context, commandName: 'help' })
 
   const language = Gamer.getLanguage(message.guildID)
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 
   let deleteTrigger = false
   const [trigger] = args
-  if (trigger.toLowerCase() === 'deletetrigger') {
+  if (trigger?.toLowerCase() === 'deletetrigger') {
     args.shift()
     deleteTrigger = true
   }
 
   const [name] = args
-  if (!name) return helpCommand?.process(message, [`shortcutcreate`], context)
+  if (!name) return helpCommand?.execute(message, [`shortcutcreate`], { ...context, commandName: 'help' })
   // Remove the shortcut name so first item is the command name
   args.shift()
 
@@ -37,9 +37,9 @@ export default new Command([`shortcutcreate`, `scc`], async (message, args, cont
 
   const actions = splitOptions.map(action => {
     // The first will always need to be a command name and the rest are the args
-    const [commandName, ...args] = action.trim().split(` `)
+    const [commandName, ...scargs] = action.trim().split(` `)
     // toString converts like #channel or @role mentions into the string version so we can save in db
-    return { command: commandName, args: args.map(a => a.toString()) }
+    return { command: commandName!, args: scargs }
   })
 
   const payload = {

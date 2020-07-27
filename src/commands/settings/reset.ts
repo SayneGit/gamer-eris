@@ -10,7 +10,6 @@ export default new Command(`reset`, async (message, _args, context) => {
     Gamer.database.models.upvote.deleteOne({ userID: message.author.id }).exec()
     Gamer.database.models.marriage.deleteOne({ authorID: message.author.id }).exec()
     Gamer.database.models.marriage.deleteOne({ spouseID: message.author.id }).exec()
-
     Gamer.database.models.reminder.deleteMany({ userID: message.author.id }).exec()
     Gamer.database.models.mission.deleteMany({ userID: message.author.id }).exec()
     Gamer.database.models.emoji.deleteMany({ authorID: message.author.id }).exec()
@@ -26,7 +25,9 @@ export default new Command(`reset`, async (message, _args, context) => {
   if (message.member.guild.ownerID !== message.author.id)
     return message.channel.createMessage(language(`settings/reset:OWNER_ONLY`))
 
-  Gamer.database.models.guild.deleteOne({ id: guildID }).exec()
+  // Let other things like xp and monitors complete before actually removing everything.
+  await Gamer.helpers.utils.sleep(2)
+  Gamer.database.models.guild.deleteOne({ guildID }).exec()
   Gamer.database.models.analytics.deleteMany({ guildID }).exec()
   Gamer.database.models.command.deleteMany({ guildID }).exec()
   Gamer.database.models.event.deleteMany({ guildID }).exec()

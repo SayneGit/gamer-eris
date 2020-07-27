@@ -1,24 +1,20 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertUser } from '../../database/mongoHandler'
 
 export default new Command(`afk`, async (message, args, context) => {
   if (!message.guildID) return
 
   const Gamer = context.client as GamerClient
-
   const language = Gamer.getLanguage(message.guildID)
-
-  const userSettings =
-    (await Gamer.database.models.user.findOne({
-      userID: message.author.id
-    })) || (await Gamer.database.models.user.create({ userID: message.author.id }))
+  const userSettings = await upsertUser(message.author.id, [message.guildID])
 
   // If no message is provided then toggle the afk status
   if (!args.length) {
-    userSettings.afk.enabled = !userSettings.afk.enabled
+    userSettings.afkEnabled = !userSettings.afkEnabled
     userSettings.save()
     message.channel.createMessage(
-      language(userSettings.afk.enabled ? `settings/afk:STATUS_ISENABLED` : `settings/afk:STATUS_ISDISABLED`)
+      language(userSettings.afkEnabled ? `settings/afk:STATUS_ISENABLED` : `settings/afk:STATUS_ISDISABLED`)
     )
     return message.member ? Gamer.helpers.levels.completeMission(message.member, `afk`, message.guildID) : undefined
   }
@@ -37,7 +33,7 @@ export default new Command(`afk`, async (message, args, context) => {
   }
 
   // Update the message
-  userSettings.afk.message = content
+  userSettings.afkMessage = content
   userSettings.save()
   return message.channel.createMessage(language(`settings/afk:MESSAGE_UPDATED`))
 })

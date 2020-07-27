@@ -8,7 +8,7 @@ export default new Command(`embedset`, async (message, _args, context) => {
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
@@ -58,6 +58,8 @@ export default new Command(`embedset`, async (message, _args, context) => {
 
       const args = msg.content.split(' ')
       const [type, ...fullValue] = args
+      if (!type) return
+
       collector.createdAt = Date.now()
 
       if (!options.includes(type.toLowerCase())) {
@@ -81,7 +83,6 @@ export default new Command(`embedset`, async (message, _args, context) => {
           break
         case `authoricon`:
           embed.code.author = {
-            // eslint-disable-next-line @typescript-eslint/camelcase
             icon_url: transformed,
             name: embed.code.author?.name || language(`embedding/embedset:UNKNOWN_AUTHOR`),
             url: embed.code.author?.url
@@ -89,7 +90,6 @@ export default new Command(`embedset`, async (message, _args, context) => {
           break
         case `authorname`:
           embed.code.author = {
-            // eslint-disable-next-line @typescript-eslint/camelcase
             icon_url: embed.code.author?.icon_url,
             name: transformed,
             url: embed.code.author?.url
@@ -97,7 +97,6 @@ export default new Command(`embedset`, async (message, _args, context) => {
           break
         case `authorurl`:
           embed.code.author = {
-            // eslint-disable-next-line @typescript-eslint/camelcase
             icon_url: embed.code.author?.icon_url,
             name: embed.code.author?.name || language(`embedding/embedset:UNKNOWN_AUTHOR`),
             url: fullValue.join(' ')
@@ -121,22 +120,16 @@ export default new Command(`embedset`, async (message, _args, context) => {
         case `footericon`:
           embed.code.footer = {
             text: embed.code.footer?.text || language(`embedding/embedset:UNKNOWN_FOOTER`),
-            // eslint-disable-next-line @typescript-eslint/camelcase
             icon_url: transformed
           }
           break
         case `footertext`:
           embed.code.footer = {
             text: transformed,
-            // eslint-disable-next-line @typescript-eslint/camelcase
             icon_url: embed.code.footer?.icon_url
           }
           break
         case `color`:
-          if (!fullValue.join(' ').startsWith('#')) {
-            message.channel.createMessage(language(`embedding/embedset:INVALID_HEX`))
-            break
-          }
           embed.setColor(fullValue.join(' '))
           break
         case `timestamp`:
@@ -149,7 +142,7 @@ export default new Command(`embedset`, async (message, _args, context) => {
           }
 
           const [fieldName, fieldValue, inline] = fullValue.join(' ').split('%%')
-          embed.addField(fieldName, fieldValue, Boolean(inline?.endsWith(' true')))
+          if (fieldName && fieldValue) embed.addField(fieldName, fieldValue, Boolean(inline?.endsWith(' true')))
           break
         default:
           // If they used the command wrong show them the help

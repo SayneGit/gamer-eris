@@ -2,11 +2,25 @@ import { Message, Member, PrivateChannel, Guild, GuildChannel } from 'eris'
 import config from '../../../config'
 import constants from '../../constants'
 import { MessageEmbed } from 'helperis'
-import GamerClient from '../structures/GamerClient'
 import { GuildSettings } from '../types/settings'
 import { highestRole } from 'helperis'
 import Gamer from '../..'
 import { milliseconds } from '../types/enums/time'
+
+export type DiscordPermission =
+  | 'readMessages'
+  | 'readMessageHistory'
+  | 'embedLinks'
+  | 'sendMessages'
+  | 'addReactions'
+  | 'externalEmojis'
+  | 'manageMessages'
+  | 'attachFiles'
+  | 'manageWebhooks'
+  | 'manageChannels'
+  | 'manageRoles'
+  | 'voiceConnect'
+  | 'voiceSpeak'
 
 const emojiRegex = /<?(?:(a):)?(\w{2,32}):(\d{17,19})?>?/
 
@@ -75,7 +89,7 @@ export default class {
     }
   }
 
-  checkPermissions(channel: GuildChannel | PrivateChannel, userID: string, permissions: string[]) {
+  checkPermissions(channel: GuildChannel | PrivateChannel, userID: string, permissions: DiscordPermission[]) {
     if (channel instanceof PrivateChannel) return true
 
     const perms = channel.permissionsOf(userID)
@@ -97,7 +111,7 @@ export default class {
   }
 
   async fetchMember(guild: Guild, id: string) {
-    // Dumb ts shit on array destructuring
+    // Dumb ts shit on array destructuring https://github.com/microsoft/TypeScript/issues/13778
     if (!id) return
 
     const userID = id.startsWith('<@') ? id.substring(id.startsWith('<@!') ? 3 : 2, id.length - 1) : id
@@ -105,11 +119,12 @@ export default class {
     if (cachedMember) return cachedMember
 
     const member = await guild.shard.client.getRESTGuildMember(guild.id, userID).catch(() => undefined)
+    if (member) guild.members.add(member)
     return member
   }
 
-  async fetchUser(Gamer: GamerClient, id: string) {
-    // dumb ts shit
+  async fetchUser(id: string) {
+    // Silly TS bug on array destructuring https://github.com/microsoft/TypeScript/issues/13778
     if (!id) return
 
     const userID = id.startsWith('<@') ? id.substring(id.startsWith('<@!') ? 3 : 2, id.length - 1) : id
@@ -132,6 +147,7 @@ export default class {
       if (Date.now() - collector.createdAt < milliseconds.MINUTE * menutime) return
 
       Gamer.collectors.delete(collector.authorID)
+      collector.reject?.()
     })
   }
 }

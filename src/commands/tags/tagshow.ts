@@ -8,9 +8,9 @@ export default new Command([`tagshow`, `ts`], async (message, args, context) => 
 
   const language = Gamer.getLanguage(message.guildID)
   const [name] = args
-  if (!name) return helpCommand.process(message, [`tagshow`], context)
+  if (!name) return helpCommand.execute(message, [`tagshow`], { ...context, commandName: 'help' })
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return

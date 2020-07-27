@@ -8,9 +8,7 @@ export default new Command([`rolesetremove`, `rsr`], async (message, args, conte
   const helpCommand = Gamer.commandForName('help')
   if (!helpCommand) return
 
-  const guildSettings = await Gamer.database.models.guild.findOne({
-    id: message.guildID
-  })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   const language = Gamer.getLanguage(message.guildID)
 
@@ -19,7 +17,7 @@ export default new Command([`rolesetremove`, `rsr`], async (message, args, conte
 
   const [name, ...roleIDsOrNames] = args
   if (!name || (!message.roleMentions.length && !roleIDsOrNames.length))
-    return helpCommand.process(message, [`rolesetremove`], context)
+    return helpCommand.execute(message, [`rolesetremove`], { ...context, commandName: 'help' })
 
   const roleIDs: string[] = [...message.roleMentions]
   for (const roleIDOrName of roleIDsOrNames) {

@@ -1,5 +1,6 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command(`sethibye`, async (message, args, context) => {
   if (!message.guildID || !message.member) return
@@ -9,15 +10,13 @@ export default new Command(`sethibye`, async (message, args, context) => {
   const helpCommand = Gamer.commandForName('help')
   if (!helpCommand) return
 
-  const guildSettings =
-    (await Gamer.database.models.guild.findOne({ id: message.guildID })) ||
-    (await Gamer.database.models.guild.create({ id: message.member.guild.id }))
+  const guildSettings = await upsertGuild(message.member.guild.id)
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [type, subtype, ...text] = args
-  if (!type || !subtype) return helpCommand.process(message, [`sethibye`], context)
+  if (!type || !subtype) return helpCommand.execute(message, [`sethibye`], { ...context, commandName: 'help' })
 
   const welcome = type.toLowerCase() === 'welcome'
 
@@ -64,5 +63,7 @@ export default new Command(`sethibye`, async (message, args, context) => {
       return message.channel.createMessage(
         language(welcome ? `settings/sethibye:WELCOME_MESSAGE_SET` : `settings/sethibye:GOODBYE_MESSAGE_SET`)
       )
+    default:
+      return
   }
 })

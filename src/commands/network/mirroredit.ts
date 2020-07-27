@@ -9,12 +9,12 @@ export default new Command([`mirroredit`, `me`], async (message, args, context) 
 
   const helpCommand = Gamer.commandForName('help')
   const [name, type] = args
-  if (!name || !type) return helpCommand?.process(message, ['mirroredit'], context)
+  if (!name || !type) return helpCommand?.execute(message, ['mirroredit'], { ...context, commandName: 'help' })
 
   if (!Gamer.vipGuildIDs.has(message.guildID))
     return message.channel.createMessage(language(`network/mirroredit:VIP_ONLY_GUILD`))
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 

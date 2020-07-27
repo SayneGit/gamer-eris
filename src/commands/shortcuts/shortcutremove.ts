@@ -7,13 +7,13 @@ export default new Command([`shortcutremove`, `shortcutdelete`, `scd`, `scr`], a
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName('help')
   const language = Gamer.getLanguage(message.guildID)
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings?.staff.adminRoleID)) return
 
   const [name] = args
-  if (!name) return helpCommand?.process(message, [`shortcutremove`], context)
+  if (!name) return helpCommand?.execute(message, [`shortcutremove`], { ...context, commandName: 'help' })
 
   const deleted = await Gamer.database.models.shortcut.findOneAndDelete({
     guildID: message.guildID,

@@ -1,9 +1,10 @@
-import { Member, VoiceChannel, TextChannel } from 'eris'
-import Event from '../lib/structures/Event'
+import { Member, VoiceChannel } from 'eris'
 import Gamer from '../index'
 import { MessageEmbed, userTag } from 'helperis'
+import { EventListener } from 'yuuko'
+import { sendMessage } from '../lib/utils/eris'
 
-export const voiceChannelLeaveServerLog = async (member: Member, channel: VoiceChannel) => {
+export async function voiceChannelLeaveServerLog(member: Member, channel: VoiceChannel) {
   const language = Gamer.getLanguage(member.guild.id)
 
   // Create the base embed that first can be sent to public logs
@@ -24,49 +25,57 @@ export const voiceChannelLeaveServerLog = async (member: Member, channel: VoiceC
     .setThumbnail(`https://i.imgur.com/Ya0SXdI.png`)
     .setTimestamp()
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: member.guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: member.guild.id })
   if (!guildSettings?.moderation.logs.serverlogs.members.channelID) return
 
-  const logChannel = member.guild.channels.get(guildSettings.moderation.logs.serverlogs.members.channelID)
-  // Send the finalized embed to the log channel
-  if (logChannel instanceof TextChannel) {
-    const botPerms = logChannel.permissionsOf(Gamer.user.id)
-    if (botPerms.has(`embedLinks`) && botPerms.has(`readMessages`) && botPerms.has(`sendMessages`))
-      logChannel.createMessage({ embed: { ...embed.code } })
-  }
+  sendMessage(guildSettings.moderation.logs.serverlogs.members.channelID, { embed: embed.code })
 }
 
-export default class extends Event {
-  async execute(member: Member | null, channel: VoiceChannel) {
-    if (!member) return
+export default new EventListener('voiceChannelLeave', async (member, channel) => {
+  if (!member) return
 
-    voiceChannelLeaveServerLog(member, channel)
-    if (member.bot) return
+  voiceChannelLeaveServerLog(member, channel)
+  if (member.bot) return
 
-    const memberSettings = await Gamer.database.models.member.findOne({
-      memberID: member.id,
-      guildID: member.guild.id
-    })
+  // Make sure the member is still part of the server
+  if (!member.guild.members.has(member.id)) return
 
-    // If they don't have a joinedat then cancel.
-    if (!memberSettings?.leveling.joinedVoiceAt) return
-    // If the joined channel is the afk channel ignore.
-    if (channel.id === channel.guild.afkChannelID) {
-      memberSettings.leveling.joinedVoiceAt = 0
-      memberSettings.save()
-      return
-    }
+  const memberSettings = await Gamer.database.models.member.findOne({
+    memberID: member.id,
+    guildID: member.guild.id
+  })
 
-    // Calculate the amount of total minutes spent in this voice channel
-    const totalMinutesInVoice = Math.round((Date.now() - memberSettings.leveling.joinedVoiceAt) / 1000 / 60)
-    const guildXPMultiplier = Gamer.guildsXPPerMinuteVoice.get(member.guild.id)
-
-    // Update voice xp to the guild
-    memberSettings.leveling.joinedVoiceAt = 0
-    memberSettings.leveling.voicexp += totalMinutesInVoice * (guildXPMultiplier || 1)
-    memberSettings.save()
-
-    // If more than 10 minutes they have fulfilled the mission
-    if (totalMinutesInVoice >= 10) Gamer.helpers.levels.completeMission(member, `voice10min`, member.guild.id)
+  // If they don't have a joinedat then cancel.
+  if (!memberSettings?.leveling.joinedVoiceAt) return
+  // If the joined channel is the afk channel ignore.
+  if (channel.id === channel.guild.afkChannelID) {
+    Gamer.database.models.member
+      .findOneAndUpdate(
+        { memberID: member.id, guildID: member.guild.id },
+        { leveling: { ...memberSettings.leveling, joinedVoiceAt: 0 } }
+      )
+      .exec()
+    return
   }
-}
+
+  // Calculate the amount of total minutes spent in this voice channel
+  const totalMinutesInVoice = Math.round((Date.now() - memberSettings.leveling.joinedVoiceAt) / 1000 / 60)
+  const guildXPMultiplier = Gamer.guildsXPPerMinuteVoice.get(member.guild.id)
+
+  // Update voice xp to the guild
+  Gamer.database.models.member
+    .findOneAndUpdate(
+      { memberID: member.id, guildID: member.guild.id },
+      {
+        leveling: {
+          ...memberSettings.leveling,
+          joinedVoiceAt: 0,
+          voicexp: totalMinutesInVoice * (guildXPMultiplier || 1)
+        }
+      }
+    )
+    .exec()
+
+  // If more than 10 minutes they have fulfilled the mission
+  if (totalMinutesInVoice >= 10) Gamer.helpers.levels.completeMission(member, `voice10min`, member.guild.id)
+})

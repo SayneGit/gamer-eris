@@ -9,23 +9,37 @@ export default new Command([`background`, `bg`], async (message, args, context) 
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
 
-  const userSettings =
-    (await Gamer.database.models.user.findOne({ userID: message.author.id })) ||
-    (await Gamer.database.models.user.create({ userID: message.author.id }))
+  const userSettings = await Gamer.database.models.user.findOne({ userID: message.author.id })
+  if (!userSettings) return
 
   const [type, id, color] = args
-
   const helpCommand = Gamer.commandForName(`help`)
-  if (!helpCommand) return
-
   const profileCommand = Gamer.commandForName(`profile`)
-  if (!profileCommand) return
 
-  if (!type || !id) return helpCommand.process(message, [`background`], context)
+  if (!type || !id) return helpCommand?.execute(message, [`background`], { ...context, commandName: 'help' })
 
-  const theme = color && color.toLowerCase() === `black` ? `black` : `white`
+  const lowerColor = color?.toLowerCase()
+  const theme =
+    lowerColor === 'black'
+      ? 'black'
+      : lowerColor === 'orange'
+      ? 'orange'
+      : lowerColor === 'red'
+      ? 'red'
+      : lowerColor === 'green'
+      ? 'green'
+      : lowerColor === 'purple'
+      ? 'purple'
+      : lowerColor === 'blue'
+      ? 'blue'
+      : 'white'
+
   // If the user try dark theme but are not vip cancel out
-  if (theme === `black` && !userSettings.vip.isVIP && !config.staff.developers.includes(message.author.id))
+  if (
+    ['black', 'orange', 'red', 'green', 'purple', 'blue'].includes(theme) &&
+    !userSettings.isVIP &&
+    !config.staff.developers.includes(message.author.id)
+  )
     return message.channel.createMessage(language(`leveling/background:VIP_THEME`))
   // Convert the string id into a number
   const backgroundID = parseInt(id, 10)
@@ -40,22 +54,22 @@ export default new Command([`background`, `bg`], async (message, args, context) 
         return Gamer.helpers.discord.embedResponse(message, language(`leveling/background:INVALID`, { id }))
 
       // If there was no theme or differnet theme but a valid id was provided just save the id
-      if (!theme || theme === userSettings.profile.theme) {
-        userSettings.profile.backgroundID = backgroundID
+      if (!theme || theme === userSettings.theme) {
+        userSettings.backgroundID = backgroundID
         message.channel.createMessage(language(`leveling/background:SAVED`))
         await userSettings.save()
-        profileCommand.process(message, [], context)
+        profileCommand?.execute(message, [], { ...context, commandName: 'profile' })
         return message.member
           ? Gamer.helpers.levels.completeMission(message.member, `background`, message.guildID)
           : undefined
       }
       // Update the theme and id
-      userSettings.profile.backgroundID = backgroundID
-      userSettings.profile.theme = theme
+      userSettings.backgroundID = backgroundID
+      userSettings.theme = theme
       message.channel.createMessage(language(`leveling/background:SAVED`))
       await userSettings.save()
 
-      profileCommand.process(message, [], context)
+      profileCommand?.execute(message, [], { ...context, commandName: 'profile' })
       return message.member
         ? Gamer.helpers.levels.completeMission(message.member, `background`, message.guildID)
         : undefined
@@ -71,5 +85,5 @@ export default new Command([`background`, `bg`], async (message, args, context) 
       return Gamer.helpers.levels.completeMission(message.member, `background`, message.guildID)
   }
 
-  return helpCommand.process(message, [`background`], context)
+  return helpCommand?.execute(message, [`background`], { ...context, commandName: 'help' })
 })

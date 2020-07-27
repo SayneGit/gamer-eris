@@ -11,12 +11,14 @@ export default new Command([`dice`, `diceroll`], async (message, args, context) 
   const [options, ...leftovers] = args
 
   const [first, second] = options?.split('d') || [1, 6]
-  const amount = Number(first) || 1
-  const maxValue = Number(second) || 6
+  let amount = Number(first) || 1
+  let maxValue = Number(second) || 6
+  if (amount > 50) amount = 50
+  if (maxValue > 100) maxValue = 100
 
   // Roll the dice
-  const rolls = []
-  const modifiedRolls = []
+  const rolls: number[] = []
+  const modifiedRolls: number[] = []
 
   const result = leftovers.length ? evaluate(leftovers.join(' ')) : 0
 
@@ -49,7 +51,7 @@ export default new Command([`dice`, `diceroll`], async (message, args, context) 
         : side === 6
         ? constants.emojis.dice.six
         : '🎲'
-    return message.channel.createMessage(`${diceemoji} ${rolls[0].toString()}`)
+    return message.channel.createMessage(`${diceemoji} ${side}`)
   }
 
   const embed = new MessageEmbed()
@@ -57,7 +59,10 @@ export default new Command([`dice`, `diceroll`], async (message, args, context) 
     .setDescription(language(`gaming/dice:REQUEST`, { value: args.join(' ') }))
     .addField(language(`gaming/dice:ROLLS`), rolls.join(', '))
   if (leftovers.length) embed.addField(language(`gaming/dice:FINAL_ROLLS`), modifiedRolls.join(', '))
-  embed.addField(language(`gaming/dice:TOTAL`), rolls.reduce((subtotal, num) => subtotal + num, 0).toString())
+  embed.addField(
+    language(`gaming/dice:TOTAL`),
+    (rolls.reduce((subtotal, num) => subtotal + num, 0) + Number(result)).toString()
+  )
 
   return message.channel.createMessage({ embed: embed.code })
 })

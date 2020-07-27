@@ -2,6 +2,7 @@ import { Command } from 'yuuko'
 import { MessageEmbed } from 'helperis'
 import GamerClient from '../../lib/structures/GamerClient'
 import { highestRole } from 'helperis'
+import { addRoleToMember } from '../../lib/utils/eris'
 
 export default new Command(`mute`, async (message, args, context) => {
   if (!message.member) return
@@ -14,7 +15,7 @@ export default new Command(`mute`, async (message, args, context) => {
   if (!botMember?.permission.has('manageRoles'))
     return message.channel.createMessage(language(`moderation/mute:NEED_MANAGE_ROLES`))
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   // If there is default settings the mute role won't exist
   if (!guildSettings || !guildSettings.moderation.roleIDs.mute)
     return message.channel.createMessage(language(`moderation/mute:NEED_MUTE_ROLE`))
@@ -26,6 +27,8 @@ export default new Command(`mute`, async (message, args, context) => {
   if (!muteRole) return message.channel.createMessage(language(`moderation/mute:NEED_MUTE_ROLE`))
 
   const [userID] = args
+  if (!userID) return
+
   args.shift()
 
   const member = await Gamer.helpers.discord.fetchMember(message.member.guild, userID)
@@ -49,7 +52,7 @@ export default new Command(`mute`, async (message, args, context) => {
   const reason = args.join(` `)
   if (!reason) return message.channel.createMessage(language(`moderation/mute:NEED_REASON`))
 
-  await member.addRole(guildSettings.moderation.roleIDs.mute)
+  addRoleToMember(member, guildSettings.moderation.roleIDs.mute)
   guildSettings.moderation.users.mutedUserIDs.push(member.id)
   guildSettings.save()
 

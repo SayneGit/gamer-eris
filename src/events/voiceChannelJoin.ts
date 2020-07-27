@@ -1,9 +1,11 @@
-import { Member, VoiceChannel, TextChannel } from 'eris'
-import Event from '../lib/structures/Event'
+import { Member, VoiceChannel } from 'eris'
 import Gamer from '../index'
 import { MessageEmbed, userTag } from 'helperis'
+import { EventListener } from 'yuuko'
+import { upsertMember } from '../database/mongoHandler'
+import { sendMessage } from '../lib/utils/eris'
 
-export const voiceChannelJoinServerLog = async (member: Member, channel: VoiceChannel) => {
+export async function voiceChannelJoinServerLog(member: Member, channel: VoiceChannel) {
   const language = Gamer.getLanguage(member.guild.id)
 
   // Create the base embed that first can be sent to public logs
@@ -24,32 +26,18 @@ export const voiceChannelJoinServerLog = async (member: Member, channel: VoiceCh
     .setThumbnail(`https://i.imgur.com/Ya0SXdI.png`)
     .setTimestamp()
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: member.guild.id })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: member.guild.id })
   if (!guildSettings?.moderation.logs.serverlogs.members.channelID) return
 
-  const logChannel = member.guild.channels.get(guildSettings.moderation.logs.serverlogs.members.channelID)
-  // Send the finalized embed to the log channel
-  if (logChannel instanceof TextChannel) {
-    const botPerms = logChannel.permissionsOf(Gamer.user.id)
-    if (botPerms.has(`embedLinks`) && botPerms.has(`readMessages`) && botPerms.has(`sendMessages`))
-      logChannel.createMessage({ embed: { ...embed.code } })
-  }
+  sendMessage(guildSettings.moderation.logs.serverlogs.members.channelID, { embed: { ...embed.code } })
 }
 
-export default class extends Event {
-  async execute(member: Member, channel: VoiceChannel) {
-    voiceChannelJoinServerLog(member, channel)
-    if (member.bot) return
+export default new EventListener('voiceChannelJoin', async (member, channel) => {
+  voiceChannelJoinServerLog(member, channel)
+  if (member.bot) return
 
-    const memberSettings =
-      (await Gamer.database.models.member.findOne({ memberID: member.id, guildID: member.guild.id })) ||
-      (await Gamer.database.models.member.create({
-        memberID: member.id,
-        guildID: member.guild.id,
-        id: `${member.guild.id}.${member.id}`
-      }))
+  const memberSettings = await upsertMember(member.id, member.guild.id)
 
-    memberSettings.leveling.joinedVoiceAt = Date.now()
-    memberSettings.save()
-  }
-}
+  memberSettings.leveling.joinedVoiceAt = Date.now()
+  memberSettings.save()
+})

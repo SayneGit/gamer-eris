@@ -6,16 +6,16 @@ export default new Command([`eventdelete`, `ed`], async (message, args, context)
 
   const Gamer = context.client as GamerClient
   const helpCommand = Gamer.commandForName(`help`)
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [number] = args
-  const eventID = parseInt(number, 10)
-  if (!eventID) return helpCommand?.process(message, [`eventdelete`], context)
+  const eventID = number ? parseInt(number, 10) : undefined
+  if (!eventID) return helpCommand?.execute(message, [`eventdelete`], { ...context, commandName: 'help' })
 
   // Get the event from this server using the id provided
   const event = await Gamer.database.models.event.findOne({
-    id: eventID,
+    eventID,
     guildID: message.guildID
   })
   const language = Gamer.getLanguage(message.guildID)
@@ -31,5 +31,5 @@ export default new Command([`eventdelete`, `ed`], async (message, args, context)
   // Delete the event itself from the database
   Gamer.database.models.event.deleteOne({ _id: event._id }).exec()
   // Let the user know it was deleted
-  return message.channel.createMessage(language(`events/eventdelete:DELETE`, { id: event.id }))
+  return message.channel.createMessage(language(`events/eventdelete:DELETE`, { eventID: event.eventID }))
 })

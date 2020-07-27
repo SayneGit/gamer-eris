@@ -5,14 +5,16 @@ export default new Command([`removemodlog`, `rml`], async (message, args, contex
   if (!message.guildID) return
 
   const Gamer = context.client as GamerClient
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
-  const [id] = args
-  const modlogID = parseInt(id, 10)
   const language = Gamer.getLanguage(message.guildID)
-  if (!id) return message.channel.createMessage(language(`moderation/removemodlog:NOT_FOUND`, { id: modlogID }))
+  const [id] = args
+  if (!id) return message.channel.createMessage(language(`moderation/removemodlog:NOT_FOUND`, { id: 'None Provided' }))
+
+  const modlogID = parseInt(id, 10)
+  if (!modlogID) return message.channel.createMessage(language(`moderation/removemodlog:NOT_FOUND`, { id: modlogID }))
 
   Gamer.database.models.modlog.deleteOne({ guildID: message.guildID, modlogID }).exec()
 

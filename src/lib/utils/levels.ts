@@ -1,8 +1,11 @@
-import { Member } from 'eris'
+import { Member, Message } from 'eris'
 import GamerClient from '../structures/GamerClient'
 import constants from '../../constants'
 import { milliseconds } from '../types/enums/time'
 import { highestRole } from 'helperis'
+import { addRoleToMember, removeRoleFromMember } from './eris'
+import { upsertMember, upsertUser } from '../../database/mongoHandler'
+import Gamer from '../..'
 
 export default class {
   // Holds the guildID.memberID for those that are in cooldown per server
@@ -21,19 +24,12 @@ export default class {
     // If the member is in cooldown cancel out
     if (!overrideCooldown && this.checkCooldown(member)) return
 
-    const memberSettings =
-      (await this.Gamer.database.models.member.findOne({ memberID: member.id, guildID: member.guild.id })) ||
-      (await this.Gamer.database.models.member.create({
-        memberID: member.id,
-        guildID: member.guild.id,
-        id: `${member.guild.id}.${member.id}`
-      }))
-
+    const memberSettings = await upsertMember(member.id, member.guild.id)
     const userSettings = await this.Gamer.database.models.user.findOne({ userID: member.id })
 
     let multiplier = 1
     if (userSettings) {
-      for (const boost of userSettings.leveling.boosts) {
+      for (const boost of userSettings.boosts) {
         if (!boost.active || !boost.activatedAt) continue
         if (boost.timestamp && boost.activatedAt + boost.timestamp < Date.now()) continue
         multiplier += boost.multiplier
@@ -41,30 +37,38 @@ export default class {
     }
 
     const memberLevel =
-      constants.levels.find(lvl => lvl.xpNeeded > (memberSettings.leveling.xp || 0)) || constants.levels[0]
+      constants.levels.find(lvl => lvl.xpNeeded > (memberSettings.leveling.xp || 0)) || constants.levels[0]!
 
     const totalXP = xpAmountToAdd * multiplier + memberSettings.leveling.xp
-    memberSettings.leveling.xp = totalXP
-    memberSettings.leveling.lastUpdatedAt = Date.now()
+    const newLevel = constants.levels.find(level => level.xpNeeded > totalXP)
 
     // User did not level up
-    if (memberLevel.xpNeeded > totalXP) {
-      memberSettings.save()
-      return
-    }
-
-    // User did level up
-
-    const newLevel = constants.levels.find(level => level.xpNeeded > totalXP)
-    // Past max xp for highest level so just no more levelups needed
-    if (!newLevel) {
-      memberSettings.save()
+    if (memberLevel.xpNeeded > totalXP || !newLevel) {
+      Gamer.database.models.member
+        .findOneAndUpdate(
+          { memberID: member.id, guildID: member.guild.id },
+          {
+            leveling: { ...memberSettings.leveling, xp: totalXP > 0 ? totalXP : 0, lastUpdatedAt: Date.now() }
+          }
+        )
+        .exec()
       return
     }
 
     // Add one level and set the XP to whatever is left
-    memberSettings.leveling.level = newLevel.level
-    memberSettings.save()
+    Gamer.database.models.member
+      .findOneAndUpdate(
+        { memberID: member.id, guildID: member.guild.id },
+        {
+          leveling: {
+            ...memberSettings.leveling,
+            xp: totalXP > 0 ? totalXP : 0,
+            lastUpdatedAt: Date.now(),
+            level: newLevel.level
+          }
+        }
+      )
+      .exec()
     // Fetch all custom guild levels data
     const levelData = await this.Gamer.database.models.level.findOne({
       guildID: member.guild.id,
@@ -85,7 +89,7 @@ export default class {
       const role = member.guild.roles.get(roleID)
       // If the role is too high for the bot to manage skip
       if (!role || botsHighestRole.position <= role.position) continue
-      member.addRole(roleID, REASON)
+      addRoleToMember(member, roleID, REASON)
       this.Gamer.amplitude.push({
         authorID: member.id,
         guildID: member.guild.id,
@@ -98,34 +102,26 @@ export default class {
 
   async addGlobalXP(member: Member, xpAmountToAdd = 1, overrideCooldown = false) {
     if (!overrideCooldown && this.checkCooldown(member, true)) return
-    const userSettings =
-      (await this.Gamer.database.models.user.findOne({ userID: member.id })) ||
-      (await this.Gamer.database.models.user.create({ userID: member.id }))
 
+    const userSettings = await upsertUser(member.id, [member.guild.id])
     let multiplier = 1
-    if (userSettings)
-      for (const boost of userSettings.leveling.boosts) {
-        if (!boost.active || !boost.activatedAt) continue
-        if (boost.timestamp && boost.activatedAt + boost.timestamp < Date.now()) continue
-        multiplier += boost.multiplier
-      }
 
-    const totalXP = xpAmountToAdd * multiplier + userSettings.leveling.xp
-    userSettings.leveling.xp = totalXP
+    for (const boost of userSettings.boosts) {
+      if (!boost.active || !boost.activatedAt) continue
+      if (boost.timestamp && boost.activatedAt + boost.timestamp < Date.now()) continue
+      multiplier += boost.multiplier
+    }
 
+    const totalXP = xpAmountToAdd * multiplier + userSettings.xp
+
+    const globalLevelDetails = constants.levels.find(lev => lev.xpNeeded > (userSettings?.xp || 0))
     // Get the details on the users next level
-    const nextLevelInfo = constants.levels.find(lvl => lvl.level === userSettings.leveling.level + 1)
+    const nextLevelInfo = constants.levels.find(lvl => lvl.level === (globalLevelDetails?.level || 0) + 1)
     // User did not level up
-    if (nextLevelInfo && nextLevelInfo.xpNeeded > totalXP) return userSettings.save()
+    if (nextLevelInfo && nextLevelInfo.xpNeeded > totalXP)
+      Gamer.database.models.user.updateOne({ userID: member.id }, { xp: totalXP }).exec()
 
-    // User did level up
-
-    const newLevel = constants.levels.find(level => level.xpNeeded > totalXP)
-    // Past max xp for highest level so just no more levelups needed
-    if (!newLevel) return userSettings.save()
-    // Add one level
-    userSettings.leveling.level = newLevel.level
-    return userSettings.save()
+    return
   }
 
   async removeXP(member: Member, xpAmountToRemove = 1) {
@@ -136,21 +132,28 @@ export default class {
 
     // If the XP is less than 0 after removing then set it to 0
     const difference = settings.leveling.xp - xpAmountToRemove
-    settings.leveling.xp = difference > 0 ? difference : 0
     // Find the new level based on the remaining XP
     const newLevel = constants.levels.find(level => level.xpNeeded > settings.leveling.xp)
-    if (!newLevel) {
-      settings.save()
+    if (!newLevel || newLevel.level === settings.leveling.level) {
+      Gamer.database.models.member
+        .findOneAndUpdate(
+          { memberID: member.id, guildID: member.guild.id },
+          {
+            leveling: { ...settings.leveling, xp: difference > 0 ? difference : 0 }
+          }
+        )
+        .exec()
       return
     }
-    // If the level has not dropped
-    if (settings.leveling.level === newLevel.level) {
-      settings.save()
-      return
-    }
-    // The level changed so first update settings
-    settings.leveling.level = newLevel.level
-    settings.save()
+
+    Gamer.database.models.member
+      .findOneAndUpdate(
+        { memberID: member.id, guildID: member.guild.id },
+        {
+          leveling: { ...settings.leveling, xp: difference > 0 ? difference : 0, level: newLevel.level }
+        }
+      )
+      .exec()
 
     // Need to check if roles need to be updated now for level rewards
     const oldLevel = constants.levels.find(level => level.level === settings.leveling.level)
@@ -178,7 +181,7 @@ export default class {
       // If the role is too high for the bot to manage skip
       if (!role || botsHighestRole.position <= role.position) continue
 
-      member.removeRole(roleID, REASON)
+      removeRoleFromMember(member, roleID, REASON)
       this.Gamer.amplitude.push({
         authorID: member.id,
         guildID: member.guild.id,
@@ -215,7 +218,7 @@ export default class {
 
   async completeMission(member: Member, commandName: string, guildID: string) {
     // If this guild has disabled missions turn this off.
-    const guildSettings = await this.Gamer.database.models.guild.findOne({ id: member.guild.id })
+    const guildSettings = await this.Gamer.database.models.guild.findOne({ guildID: member.guild.id })
     if (guildSettings?.xp.disableMissions) return
 
     const upvoted = await this.Gamer.database.models.upvote.findOne({
@@ -273,36 +276,41 @@ export default class {
     const allGuildSettings = await this.Gamer.database.models.guild.find({ 'xp.inactiveDaysAllowed': { $gt: 0 } })
 
     for (const guildSettings of allGuildSettings) {
-      // If the inactive days allowed has not been enabled then skip
-      if (!guildSettings.xp.inactiveDaysAllowed) continue
-
-      const guild = this.Gamer.guilds.get(guildSettings.id)
+      const guild = this.Gamer.guilds.get(guildSettings.guildID)
       if (!guild) continue
 
       // Get all members from the database as anyone with default settings dont need to be checked
-      const allMemberSettings = await this.Gamer.database.models.member.find()
+      const allMemberSettings = await this.Gamer.database.models.member.find({ guildID: guild.id })
 
       allMemberSettings.forEach(async memberSettings => {
         // If they have never been updated skip. Or if their XP is below 100 the minimum threshold
-        if (!memberSettings.leveling.lastUpdatedAt || memberSettings.leveling.xp < 100) {
-          return
-        }
+        if (!memberSettings.leveling.lastUpdatedAt || memberSettings.leveling.xp < 100) return
 
         // Calculate how many days it has been since this user was last updated
-        const daysSinceLastUpdated = (Date.now() - memberSettings.leveling.lastUpdatedAt) / 1000 / 60 / 60 / 24
-        if (daysSinceLastUpdated < guildSettings.xp.inactiveDaysAllowed) {
-          return
-        }
+        const daysSinceLastUpdated = (Date.now() - memberSettings.leveling.lastUpdatedAt) / milliseconds.DAY
+        if (daysSinceLastUpdated < guildSettings.xp.inactiveDaysAllowed) return
 
         // Get the member object
         const member = await this.Gamer.helpers.discord.fetchMember(guild, memberSettings.memberID)
-        if (!member) {
-          return
-        }
+        if (!member) return
 
         // Remove 1% of XP from the user for being inactive today.
-        this.Gamer.helpers.levels.removeXP(member, Math.floor(memberSettings.leveling.xp * 0.01))
+        this.removeXP(
+          member,
+          Math.floor(memberSettings.leveling.xp * ((guildSettings.xp.inactivePercentage || 1) / 1000))
+        )
       })
     }
+  }
+
+  processXP(message: Message) {
+    // If a bot or in dm, no XP we want to encourage activity in servers not dms
+    if (message.author.bot || !message.member) return
+
+    const guildXP = this.Gamer.guildsXPPerMessage.get(message.member.guild.id)
+    // Update XP for the member locally
+    this.Gamer.helpers.levels.addLocalXP(message.member, guildXP || 1)
+    // Update XP for the user globally
+    this.Gamer.helpers.levels.addGlobalXP(message.member, 1)
   }
 }

@@ -12,7 +12,7 @@ export default new Command([`ban`, `b`], async (message, args, context) => {
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // Check if the bot has the ban permissions
   if (!botMember.permission.has('banMembers'))
@@ -21,11 +21,12 @@ export default new Command([`ban`, `b`], async (message, args, context) => {
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [userID, ...text] = args
+  if (!userID) return message.channel.createMessage(language(`moderation/ban:NEED_USER`))
 
   const reason = text.join(` `)
   if (!reason) return message.channel.createMessage(language(`moderation/ban:NEED_REASON`))
 
-  const user = await Gamer.helpers.discord.fetchUser(Gamer, userID)
+  const user = await Gamer.helpers.discord.fetchUser(userID)
   if (!user) return message.channel.createMessage(language(`moderation/ban:NEED_USER`))
 
   const member = await Gamer.helpers.discord.fetchMember(message.member.guild, user.id)

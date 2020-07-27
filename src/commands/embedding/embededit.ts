@@ -26,7 +26,7 @@ export default new Command(`embededit`, async (message, args, context) => {
   const [embed] = messageToUse.embeds
   if (!embed) return
 
-  const settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isModOrAdmin(message, settings)) return
 
@@ -46,7 +46,16 @@ export default new Command(`embededit`, async (message, args, context) => {
     if (typeof embedCode.thumbnail === 'string') embedCode.thumbnail = { url: embedCode.thumbnail }
     if (embedCode.timestamp) embedCode.timestamp = new Date().toISOString()
     if (embedCode.color === 'RANDOM') embedCode.color = Math.floor(Math.random() * (0xffffff + 1))
-    return messageToUse.edit({ content: embedCode.plaintext, embed: embedCode })
+    else if (embedCode.color?.toString().startsWith('#'))
+      embedCode.color = parseInt(embedCode.color.replace('#', ''), 16)
+    messageToUse.edit({ content: embedCode.plaintext, embed: embedCode })
+    if (settings?.vip.isVIP) message.delete().catch(() => undefined)
+    return Gamer.helpers.discord.embedResponse(
+      message,
+      language('embedding/embededit:EDITED', {
+        link: `https://discord.com/channels/${message.guildID}/${messageToUse.channel.id}/${messageToUse.id}`
+      })
+    )
   } catch (error) {
     const embed = new MessageEmbed()
       .setAuthor(message.author.username, message.author.avatarURL)

@@ -1,13 +1,14 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { CategoryChannel } from 'eris'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command(`setmail`, async (message, args, context) => {
   if (!message.guildID || !message.member) return
 
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
-  let settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await upsertGuild(message.guildID)
 
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isAdmin(message, settings?.staff.adminRoleID)) return
@@ -16,7 +17,7 @@ export default new Command(`setmail`, async (message, args, context) => {
   const helpCommand = Gamer.commandForName(`help`)
   if (!helpCommand) return
 
-  if (!type) return helpCommand.process(message, [`setmail`], context)
+  if (!type) return helpCommand.execute(message, [`setmail`], { ...context, commandName: 'help' })
 
   const validRoleIDs = message.roleMentions
   for (const roleIDOrName of roleIDsOrNames) {
@@ -30,9 +31,7 @@ export default new Command(`setmail`, async (message, args, context) => {
   // Remove the type and the leftover should be all words
   args.shift()
 
-  if (!settings) settings = await Gamer.database.models.guild.create({ id: message.guildID })
-
-  const channelID = message.channelMentions.length ? message.channelMentions[0] : message.channel.id
+  const channelID = message.channelMentions.length ? message.channelMentions[0]! : message.channel.id
 
   switch (type.toLowerCase()) {
     case `enable`:
@@ -76,5 +75,5 @@ export default new Command(`setmail`, async (message, args, context) => {
       return message.channel.createMessage(language(`settings/setmail:CATEGORY_UPDATED`))
   }
 
-  return helpCommand.process(message, [`setmail`], context)
+  return helpCommand.execute(message, [`setmail`], { ...context, commandName: 'help' })
 })

@@ -1,5 +1,7 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import constants from '../../constants'
+import { upsertGuild } from '../../database/mongoHandler'
 
 export default new Command(`setxp`, async (message, args, context) => {
   if (!message.guildID || !message.member) return
@@ -8,17 +10,14 @@ export default new Command(`setxp`, async (message, args, context) => {
   const language = Gamer.getLanguage(message.guildID)
   const helpCommand = Gamer.commandForName('help')
 
-  const guildSettings =
-    (await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })) || (await Gamer.database.models.guild.create({ id: message.guildID }))
+  const guildSettings = await upsertGuild(message.member.guild.id)
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isAdmin(message, guildSettings.staff.adminRoleID)) return
 
   const [type, number] = args
-  if (!type) return helpCommand?.process(message, [`setxp`], context)
-  const amount = parseInt(number, 10)
+  if (!type) return helpCommand?.execute(message, [`setxp`], { ...context, commandName: 'help' })
+  const amount = parseInt(number!, 10)
 
   // First check the menus that would not need `idea` or `bug`
   switch (type.toLowerCase()) {
@@ -26,7 +25,7 @@ export default new Command(`setxp`, async (message, args, context) => {
     case 'message':
       if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`settings/setxp:NEED_VIP_MESSAGE`))
 
-      if (!amount) return helpCommand?.process(message, [`setxp`], context)
+      if (!amount && amount !== 0) return helpCommand?.execute(message, [`setxp`], { ...context, commandName: 'help' })
 
       guildSettings.xp.perMessage = amount
       guildSettings.save()
@@ -35,7 +34,7 @@ export default new Command(`setxp`, async (message, args, context) => {
     case 'voice':
       if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`settings/setxp:NEED_VIP_VOICE`))
 
-      if (!amount) return helpCommand?.process(message, [`setxp`], context)
+      if (!amount && amount !== 0) return helpCommand?.execute(message, [`setxp`], { ...context, commandName: 'help' })
 
       guildSettings.xp.perMinuteVoice = amount
       guildSettings.save()
@@ -45,11 +44,22 @@ export default new Command(`setxp`, async (message, args, context) => {
       if (!guildSettings?.vip.isVIP)
         return message.channel.createMessage(language(`settings/setxp:NEED_VIP_INACTIVITY`))
 
-      if (!amount) return helpCommand?.process(message, [`setxp`], context)
+      if (!amount && amount !== 0) return helpCommand?.execute(message, [`setxp`], { ...context, commandName: 'help' })
 
       guildSettings.xp.inactiveDaysAllowed = amount
       guildSettings.save()
       return message.channel.createMessage(language(`settings/setxp:INACTIVITY`, { amount }))
+    case 'decay':
+      if (!guildSettings.vip.isVIP)
+        return message.channel.createMessage(
+          language('common:NEED_VIP', { invite: constants.general.gamerServerInvite })
+        )
+
+      if (!amount) return helpCommand?.execute(message, [`setxp`], { ...context, commandName: 'help' })
+
+      guildSettings.xp.inactivePercentage = amount
+      guildSettings.save()
+      return message.channel.createMessage(language('settings/setxp:DECAY', { amount }))
     case 'missions':
     case 'mission':
       guildSettings.xp.disableMissions = !Boolean(guildSettings.xp.disableMissions)
@@ -61,5 +71,5 @@ export default new Command(`setxp`, async (message, args, context) => {
       )
   }
 
-  return helpCommand?.process(message, [`setxp`], context)
+  return helpCommand?.execute(message, [`setxp`], { ...context, commandName: 'help' })
 })

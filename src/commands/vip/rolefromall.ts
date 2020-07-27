@@ -1,6 +1,7 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { highestRole } from 'helperis'
+import { removeRoleFromMember } from '../../lib/utils/eris'
 
 export default new Command([`rolefromall`], async (message, args, context) => {
   if (!message.member || !message.guildID) return
@@ -12,7 +13,7 @@ export default new Command([`rolefromall`], async (message, args, context) => {
 
   const language = Gamer.getLanguage(message.guildID)
 
-  const guildSettings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If they are using default settings, they won't be vip server
   if (!guildSettings?.vip.isVIP) return message.channel.createMessage(language(`vip/rolefromall:NEED_VIP`))
@@ -25,7 +26,7 @@ export default new Command([`rolefromall`], async (message, args, context) => {
 
   const role = message.roleMentions.length
     ? // If a role was mentioned use it
-      message.member.guild.roles.get(message.roleMentions[0])
+      message.member.guild.roles.get(message.roleMentions[0]!)
     : // ELse if a role id or name was provided
     roleIDOrName
     ? // Check if its a valid role id
@@ -45,6 +46,10 @@ export default new Command([`rolefromall`], async (message, args, context) => {
 
   const REASON = language(`vip/rolefromall:REASON`, { user: message.author.username })
 
+  if (!Gamer.allMembersFetchedGuildIDs.has(message.member.guild.id)) {
+    await message.member.guild.fetchAllMembers()
+    Gamer.allMembersFetchedGuildIDs.add(message.member.guild.id)
+  }
   message.channel.createMessage(
     language(`vip/rolefromall:PATIENCE`, { amount: message.member.guild.members.size, mention: message.author.mention })
   )
@@ -67,7 +72,7 @@ export default new Command([`rolefromall`], async (message, args, context) => {
     // Increment the counter
     counter++
     // Need this await to make the loop async so that if a user deletes a role it will break in the check above
-    await member.removeRole(role.id, REASON).catch(() => undefined)
+    removeRoleFromMember(member, role.id, REASON).catch(() => undefined)
 
     Gamer.amplitude.push({
       authorID: message.author.id,

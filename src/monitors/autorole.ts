@@ -4,13 +4,14 @@ import Monitor from '../lib/structures/Monitor'
 import { Message, GuildChannel } from 'eris'
 import GamerClient from '../lib/structures/GamerClient'
 import { highestRole } from 'helperis'
+import { addRoleToMember } from '../lib/utils/eris'
 
 export default class extends Monitor {
   async execute(message: Message, Gamer: GamerClient) {
-    // If has roles then this monitor is useless. Every user has everyone role so must be more than 1.
+    // If has roles then this monitor is useless.
     // This will also end up checking if they have the auto role already
     // The message type helps ignore other messages like discord default welcome messages
-    if (!message.guildID || message.type !== 0 || !message.member || message.member.roles.length > 1) return
+    if (!message.guildID || message.type !== 0 || !message.member || message.member.roles.length) return
 
     const bot = await Gamer.helpers.discord.fetchMember(message.member.guild, Gamer.user.id)
     if (!bot || !bot.permission.has('manageRoles')) return
@@ -18,9 +19,7 @@ export default class extends Monitor {
     const role = highestRole(bot)
 
     // Get the verification category id so we dont assign the role while they are chatting in verification
-    const guildSettings = await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })
+    const guildSettings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
     // If the guild has default settings then they dont have verification or autorole enabled
     if (!guildSettings) return
 
@@ -45,6 +44,10 @@ export default class extends Monitor {
       type: 'ROLE_ADDED'
     })
 
-    return message.member.addRole(guildSettings.moderation.roleIDs.autorole, language(`basic/verify:AUTOROLE_ASSIGNED`))
+    return addRoleToMember(
+      message.member,
+      guildSettings.moderation.roleIDs.autorole,
+      language(`basic/verify:AUTOROLE_ASSIGNED`)
+    )
   }
 }

@@ -1,8 +1,9 @@
 import mongoose from 'mongoose'
 
 export default new mongoose.Schema({
-  // The channel id for this mail. Also used as the unique identifier
   id: String,
+  // The channel id for this mail. Also used as the unique identifier
+  channelID: String,
   // The user id who sent the mail.
   userID: String,
   // The guild id for where the mail was created

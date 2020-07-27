@@ -1,14 +1,12 @@
-import { Client, ClientOptions } from 'yuuko'
+import { Client } from 'yuuko'
 import i18n from '../../i18next'
 import { TFunction } from 'i18next'
 import * as glob from 'glob'
-import { PrivateChannel, Message } from 'eris'
 import { Collector, Mission, GamerTag } from '../types/gamer'
 import * as fs from 'fs'
 import { join } from 'path'
 
 import Monitor from './Monitor'
-import Event from './Event'
 
 import Database from '../../database/mongodb'
 
@@ -28,7 +26,6 @@ import UtilsHelper from '../utils/utils'
 
 import constants from '../../constants'
 import { AmplitudeEvent } from '../types/amplitude'
-import Gamer from '../..'
 import { GamerCommandPermission } from '../../database/schemas/command'
 import { GamerMirror } from '../../database/schemas/mirrors'
 
@@ -38,6 +35,11 @@ const assetsFolder = join(rootFolder, `assets`)
 const assetsPaths = {
   whiteRectangle: join(assetsFolder, `profile/left_rectangle_white.png`),
   blackRectangle: join(assetsFolder, `profile/left_rectangle_black.png`),
+  orangeRectangle: join(assetsFolder, `profile/left_rectangle_orange.png`),
+  redRectangle: join(assetsFolder, `profile/left_rectangle_red.png`),
+  greenRectangle: join(assetsFolder, `profile/left_rectangle_green.png`),
+  purpleRectangle: join(assetsFolder, `profile/left_rectangle_purple.png`),
+  blueRectangle: join(assetsFolder, `profile/left_rectangle_blue.png`),
   blueCircle: join(assetsFolder, `profile/blue_circle.png`),
   xpbar: join(assetsFolder, `profile/xp_bar_empty.png`),
   badges: {
@@ -78,6 +80,11 @@ export default class GamerClient extends Client {
     profiles: {
       blackRectangle: fs.readFileSync(assetsPaths.blackRectangle),
       whiteRectangle: fs.readFileSync(assetsPaths.whiteRectangle),
+      orangeRectangle: fs.readFileSync(assetsPaths.orangeRectangle),
+      redRectangle: fs.readFileSync(assetsPaths.redRectangle),
+      greenRectangle: fs.readFileSync(assetsPaths.greenRectangle),
+      purpleRectangle: fs.readFileSync(assetsPaths.purpleRectangle),
+      blueRectangle: fs.readFileSync(assetsPaths.blueRectangle),
       blueCircle: fs.readFileSync(assetsPaths.blueCircle),
       xpbar: fs.readFileSync(assetsPaths.xpbar),
       badges: {
@@ -118,9 +125,6 @@ export default class GamerClient extends Client {
 
   missions: Mission[] = []
   missionsStartTimestamp = Date.now()
-
-  // All our stores to store files which we can reload easily.
-  events: Map<string, Event> = new Map()
   monitors: Map<string, Monitor> = new Map()
   // Tags are cached so no need to fetch on every message
   tags: Map<string, GamerTag> = new Map()
@@ -148,23 +152,8 @@ export default class GamerClient extends Client {
   mirrors = new Map<string, GamerMirror>()
   /** Debug boolean to enable all the DEBUG logs during moments where we need to debug. */
   debugModeEnabled = false
-
-  constructor(options: ClientOptions) {
-    super(options)
-
-    this.on('messageCreate', this.runMonitors)
-  }
-
-  async runMonitors(message: Message) {
-    for (const monitor of Gamer.monitors.values()) {
-      if (monitor.ignoreBots && message.author.bot) continue
-      if (monitor.ignoreDM && message.channel instanceof PrivateChannel) continue
-      if (monitor.ignoreEdits && message.editedTimestamp) continue
-      if (monitor.ignoreOthers && message.author.id !== this.user.id) continue
-
-      monitor.execute(message, this)
-    }
-  }
+  /** Stores user ids for each word that has been subscribed for. */
+  spyRecords = new Map<string, string[]>()
 
   async connect() {
     // get i18n ready
@@ -182,7 +171,6 @@ export default class GamerClient extends Client {
     const filenames = glob.sync(pattern)
     for (const filename of filenames) {
       delete require.cache[filename]
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       let file = require(filename)
       // Use object.assign to preserve other exports
       file = Object.assign(file.default, file)
@@ -192,8 +180,6 @@ export default class GamerClient extends Client {
       const name = filename.substring(filename.lastIndexOf('/') + 1, filename.lastIndexOf('.'))
       // Add to the proper map based on the name of the directory
       if (dirname.endsWith('monitors/')) this.monitors.set(name, new file())
-      if (dirname.endsWith('events/')) this.events.set(name, new file(name))
-      // else if (dirname.endsWith('inhibitors/')) this.inhibitors.set(name, new file())
     }
     return this
   }

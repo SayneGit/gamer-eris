@@ -2,12 +2,14 @@ import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { Role } from 'eris'
 import { highestRole } from 'helperis'
+import { upsertGuild } from '../../database/mongoHandler'
+import { parseRole } from '../../lib/utils/arguments'
 
 export default new Command(`public`, async (message, args, context) => {
   if (!message.guildID || !message.member) return
 
   const Gamer = context.client as GamerClient
-  let settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await upsertGuild(message.member.guild.id)
   const language = Gamer.getLanguage(message.guildID)
 
   // If the user does not have a modrole or admin role quit out
@@ -26,9 +28,7 @@ export default new Command(`public`, async (message, args, context) => {
   if (!botsHighestRole) return
 
   for (const roleNameOrID of [...args, ...message.roleMentions]) {
-    const role =
-      message.member.guild.roles.get(roleNameOrID) ||
-      message.member.guild.roles.find(r => r.id === roleNameOrID || r.name.toLowerCase() === roleNameOrID.toLowerCase())
+    const role = parseRole(message, roleNameOrID)
     if (!role || (type === `add` && botsHighestRole.position <= role.position)) continue
     if (type === `add` && settings && settings.moderation.roleIDs.public.includes(role.id)) continue
     if (type === `remove` && settings && !settings.moderation.roleIDs.public.includes(role.id)) continue
@@ -38,11 +38,10 @@ export default new Command(`public`, async (message, args, context) => {
 
   if (!validRoles.size) return message.channel.createMessage(language(`roles/public:NO_VALID_ROLES`))
 
-  if (!settings) settings = await Gamer.database.models.guild.create({ id: message.guildID })
   const roleIDs = [...validRoles].map(role => role.id)
   const roleNames = [...validRoles].map(role => role.name)
 
-  switch (type.toLowerCase()) {
+  switch (type?.toLowerCase()) {
     case `add`:
       for (const id of roleIDs) settings.moderation.roleIDs.public.push(id)
       settings.save()

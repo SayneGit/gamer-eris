@@ -1,7 +1,8 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
+import { upsertGuild } from '../../database/mongoHandler'
 
-export default new Command(`setfeedback`, async (message, args, context) => {
+export default new Command([`setfeedback`, `sfb`], async (message, args, context) => {
   if (!message.guildID || !message.member) return
 
   const Gamer = context.client as GamerClient
@@ -9,16 +10,13 @@ export default new Command(`setfeedback`, async (message, args, context) => {
   const helpCommand = Gamer.commandForName('help')
   if (!helpCommand) return
 
-  const guildSettings =
-    (await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })) || (await Gamer.database.models.guild.create({ id: message.guildID }))
+  const guildSettings = await upsertGuild(message.member.guild.id)
 
   // If the user is not an admin cancel out
   if (!Gamer.helpers.discord.isModOrAdmin(message, guildSettings)) return
 
   const [type, action] = args
-  if (!type) return helpCommand.process(message, [`setfeedback`], context)
+  if (!type) return helpCommand.execute(message, [`setfeedback`], { ...context, commandName: 'help' })
 
   const isIdea = type.toLowerCase() === `idea`
 
@@ -92,7 +90,7 @@ export default new Command(`setfeedback`, async (message, args, context) => {
 
   const currentChannelID = isIdea ? guildSettings.feedback.idea.channelID : guildSettings.feedback.bugs.channelID
 
-  if (!action) return helpCommand.process(message, [`setfeedback`], context)
+  if (!action) return helpCommand.execute(message, [`setfeedback`], { ...context, commandName: 'help' })
   // These menus require the user type .setfeedback `idea` or `bug`
   switch (action.toLowerCase()) {
     case 'channel':
@@ -162,5 +160,5 @@ export default new Command(`setfeedback`, async (message, args, context) => {
 
   await message.channel.createMessage(language(`settings/setfeedback:INVALID_USE`))
 
-  return helpCommand.process(message, [`setfeedback`], context)
+  return helpCommand.execute(message, [`setfeedback`], { ...context, commandName: 'help' })
 })

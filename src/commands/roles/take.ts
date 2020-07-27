@@ -1,13 +1,14 @@
 import { Command } from 'yuuko'
 import GamerClient from '../../lib/structures/GamerClient'
 import { highestRole, userTag } from 'helperis'
+import { removeRoleFromMember } from '../../lib/utils/eris'
 
 export default new Command(`take`, async (message, args, context) => {
   if (!message.guildID || !message.member) return
 
   const Gamer = context.client as GamerClient
   const language = Gamer.getLanguage(message.guildID)
-  const settings = await Gamer.database.models.guild.findOne({ id: message.guildID })
+  const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
 
   // If the user does not have a modrole or admin role quit out
   if (!Gamer.helpers.discord.isModOrAdmin(message, settings)) return
@@ -17,12 +18,13 @@ export default new Command(`take`, async (message, args, context) => {
   if (!bot || !bot.permission.has('manageRoles'))
     return message.channel.createMessage(language(`roles/take:MISSING_MANAGE_ROLES`))
 
-  const [userID, roleNameOrID] = args
+  const [id, roleNameOrID] = args
   // If a user is mentioned use the mention else see if a user id was provided
   const [user] = message.mentions
-  const member = await Gamer.helpers.discord
-    .fetchMember(message.member.guild, user?.id || userID)
-    .catch(() => undefined)
+  const userID = user?.id || id
+  if (!userID) return message.channel.createMessage(language(`roles/take:NEED_USER`))
+
+  const member = await Gamer.helpers.discord.fetchMember(message.member.guild, user?.id || userID)
   if (!member) return message.channel.createMessage(language(`roles/take:NEED_USER`))
   // if a role is mentioned use the mentioned role else see if a role id or role name was provided
   const [roleID] = message.roleMentions
@@ -43,7 +45,7 @@ export default new Command(`take`, async (message, args, context) => {
     return message.channel.createMessage(language(`roles/take:USER_TOO_LOW`))
 
   // Give the role to the user as all checks have passed
-  member.removeRole(role.id, language(`roles/take:GIVEN_BY`, { user: encodeURIComponent(userTag(member)) }))
+  removeRoleFromMember(member, role.id, language(`roles/take:GIVEN_BY`, { user: encodeURIComponent(userTag(member)) }))
 
   Gamer.amplitude.push({
     authorID: message.author.id,

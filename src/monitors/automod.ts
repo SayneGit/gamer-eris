@@ -2,17 +2,17 @@ import Monitor from '../lib/structures/Monitor'
 import { Message, GuildTextableChannel } from 'eris'
 import GamerClient from '../lib/structures/GamerClient'
 import { GuildSettings } from '../lib/types/settings'
-import { MessageEmbed } from 'helperis'
+import { MessageEmbed, userTag } from 'helperis'
 import * as confusables from 'confusables'
 import getURLs from 'get-urls'
+import { sendMessage, deleteMessage } from '../lib/utils/eris'
+import constants from '../constants'
 
 export default class extends Monitor {
   async execute(message: Message, Gamer: GamerClient) {
     if (!message.guildID || !message.member) return
 
-    const settings = await Gamer.database.models.guild.findOne({
-      id: message.guildID
-    })
+    const settings = await Gamer.database.models.guild.findOne({ guildID: message.guildID })
     // If they have default settings, then no automoderation features will be enabled
     if (!settings) return
 
@@ -32,6 +32,16 @@ export default class extends Monitor {
 
     let content = `${message.content}`
 
+    const logEmbed = new MessageEmbed()
+      .setAuthor(userTag(message.author), message.author.avatarURL)
+      .setTitle(language('moderation/logs:CAP_SPAM'))
+      .setThumbnail('https://i.imgur.com/E8IfeWc.png')
+      .setDescription(message.content)
+      .addField(language('moderation/logs:MESSAGE_ID'), message.id)
+      .addField(language('moderation/logs:CHANNEL'), message.channel.mention)
+      .setFooter(language('moderation/logs:XP_LOST', { amount: 3 }))
+      .setTimestamp(message.timestamp)
+
     // Run the filter and get back either null or cleaned string
     const capitalSpamCleanup = this.capitalSpamFilter(message, settings)
     // If a cleaned string is returned set the content to the string
@@ -47,6 +57,9 @@ export default class extends Monitor {
         timestamp: message.timestamp,
         type: 'CAPITAL_SPAM_DELETED'
       })
+
+      if (settings.moderation.logs.modlogsChannelID)
+        sendMessage(settings.moderation.logs.modlogsChannelID, { embed: logEmbed.code })
       reasons.push(language(`common:AUTOMOD_CAPITALS`))
     }
 
@@ -54,7 +67,6 @@ export default class extends Monitor {
     const naughtyWordCleanup = this.naughtyWordFilter(content, settings)
     if (naughtyWordCleanup) {
       const naughtyReason = language(`common:AUTOMOD_NAUGHTY`)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _word of naughtyWordCleanup.naughtyWords) {
         if (!reasons.includes(naughtyReason)) reasons.push(naughtyReason)
         // Remove 5 XP per word used
@@ -69,6 +81,14 @@ export default class extends Monitor {
         })
       }
 
+      if (naughtyWordCleanup.naughtyWords.length) {
+        logEmbed
+          .setFooter(language('moderation/logs:XP_LOST', { amount: 5 * naughtyWordCleanup.naughtyWords.length }))
+          .setTitle(language('moderation/logs:PROFANITY', { words: naughtyWordCleanup.naughtyWords.join(', ') }))
+        if (settings.moderation.logs.modlogsChannelID)
+          sendMessage(settings.moderation.logs.modlogsChannelID, { embed: logEmbed.code })
+      }
+
       // If a cleaned string is returned set the content to the string
       content = naughtyWordCleanup.cleanString
     }
@@ -79,7 +99,6 @@ export default class extends Monitor {
     if (linkFilterCleanup) {
       content = linkFilterCleanup.content
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _url of linkFilterCleanup.filteredURLs) {
         Gamer.helpers.levels.removeXP(message.member, 5)
         Gamer.amplitude.push({
@@ -91,6 +110,15 @@ export default class extends Monitor {
           type: 'URLS_DELETED'
         })
       }
+
+      if (linkFilterCleanup.filteredURLs.length) {
+        logEmbed
+          .setFooter(language('moderation/logs:XP_LOST', { amount: 5 * linkFilterCleanup.filteredURLs.length }))
+          .setTitle(language('moderation/logs:LINK_POSTED', { links: linkFilterCleanup.filteredURLs.join(', ') }))
+        if (settings.moderation.logs.modlogsChannelID)
+          sendMessage(settings.moderation.logs.modlogsChannelID, { embed: logEmbed.code })
+      }
+
       reasons.push(language(`common:AUTOMOD_URLS`))
     }
 
@@ -104,28 +132,37 @@ export default class extends Monitor {
 
     embed.setDescription(content)
 
-    if (reasons.length === 1) embed.setFooter(reasons[0])
+    if (reasons.length === 1) embed.setFooter(reasons[0]!)
     else embed.setFooter(language(`common:TOO_MUCH_WRONG`))
     // Send back the cleaned message with the author information
     message.channel.createMessage({ embed: embed.code })
     if (reasons.length > 1) {
       const reason = await message.channel.createMessage(`${message.author.mention} ${reasons.join('\n')}`)
-      setTimeout(() => reason.delete().catch(() => undefined), 3000)
+      deleteMessage(reason, 3, language('common:CLEAR_SPAM'))
     }
   }
 
   capitalSpamFilter(message: Message, settings: GuildSettings) {
     if (settings.moderation.filters.capital === 100) return
 
-    const messageWithoutSpaces = message.content.replace(/[^A-Za-z]/g, ``)
-    const finalLength = messageWithoutSpaces.length
-    if (finalLength === 1 || (message.content.split(` `).length < 2 && finalLength <= 10)) return
+    let lowercaseCount = 0
+    let uppercaseCount = 0
+    let characterCount = 0
 
-    // Removes all non-capitals and checks how many left
-    const count = message.content.replace(/[^A-Z]/g, '').length
-    const percentageOfCapitals = (count / finalLength) * 100
-    // If image is sent it isNaN
-    if (isNaN(percentageOfCapitals) || percentageOfCapitals < settings.moderation.filters.capital) return
+    for (const letter of message.content) {
+      for (const language of [constants.alphabet.english, constants.alphabet.russian]) {
+        if (language.lowercase.includes(letter)) lowercaseCount++
+        else if (language.uppercase.includes(letter)) uppercaseCount++
+      }
+
+      if (letter !== ' ') characterCount++
+    }
+
+    const letterCount = lowercaseCount + uppercaseCount
+    if (characterCount === 1 || (message.content.split(' ').length < 2 && letterCount <= 10)) return
+
+    const percentageOfCapitals = (uppercaseCount / characterCount) * 100
+    if (percentageOfCapitals < settings.moderation.filters.capital) return
 
     // If there was too many capitals then lower it
     return message.content.toLowerCase()
@@ -165,14 +202,14 @@ export default class extends Monitor {
 
       const result = []
       for (let i = 0; i < textArray.length; i++) {
-        const first = textArray[i]
+        const first = textArray[i] || ``
         const second = textArray[i + 1] || ``
 
         if (first + second === cleanedWord) {
           result.push(`$`.repeat(first.length), `$`.repeat(second.length))
           i += 1
         } else {
-          result.push(textArray[i])
+          result.push(first)
         }
       }
 
